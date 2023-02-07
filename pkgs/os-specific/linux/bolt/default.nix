@@ -44,6 +44,10 @@ stdenv.mkDerivation rec {
     })
   ];
 
+  depsBuildBuild = [
+    pkg-config
+  ];
+
   nativeBuildInputs = [
     asciidoc
     docbook_xml_dtd_45
@@ -53,25 +57,26 @@ stdenv.mkDerivation rec {
     meson
     ninja
     pkg-config
+    glib
   ] ++ lib.optional (!doCheck) python3;
 
   buildInputs = [
-    glib
     polkit
     systemd
   ];
 
-  doCheck = true;
+  # https://gitlab.freedesktop.org/bolt/bolt/-/issues/181
+  doCheck = false;
 
   preCheck = ''
     export LD_LIBRARY_PATH=${umockdev.out}/lib/
   '';
 
-  checkInputs = [
+  nativeCheckInputs = [
     dbus
     gobject-introspection
     umockdev
-    (python3.withPackages
+    (python3.pythonForBuild.withPackages
       (p: [ p.pygobject3 p.dbus-python p.python-dbusmock ]))
   ];
 

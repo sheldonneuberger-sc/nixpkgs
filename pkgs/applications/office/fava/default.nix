@@ -2,15 +2,24 @@
 
 python3.pkgs.buildPythonApplication rec {
   pname = "fava";
-  version = "1.22.2";
+  version = "1.23.1";
   format = "pyproject";
 
   src = python3.pkgs.fetchPypi {
     inherit pname version;
-    sha256 = "sha256-Oarh0a0q+PYFojsYmdX763vFRSQhtm09z4ruSxXDpSA=";
+    sha256 = "sha256-Uw8UIJa+Dtsy+o31I1ynLyhZrFNX42NFRXu1O2ISbzU=";
   };
 
-  nativeBuildInputs = with python3.pkgs; [ setuptools-scm ];
+  patches = [
+    ./flask-babel.patch
+  ];
+
+  pythonRelaxDeps = [
+    "cheroot"
+    "Flask-Babel"
+  ];
+
+  nativeBuildInputs = with python3.pkgs; [ setuptools-scm pythonRelaxDepsHook ];
 
   propagatedBuildInputs = with python3.pkgs; [
     babel
@@ -18,7 +27,7 @@ python3.pkgs.buildPythonApplication rec {
     cheroot
     click
     flask
-    flaskbabel
+    flask-babel
     jaraco_functools
     jinja2
     markdown2
@@ -27,7 +36,7 @@ python3.pkgs.buildPythonApplication rec {
     werkzeug
   ];
 
-  checkInputs = with python3.pkgs; [
+  nativeCheckInputs = with python3.pkgs; [
     pytestCheckHook
   ];
 

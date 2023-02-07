@@ -17,7 +17,7 @@ in
 {
 
   meta = {
-    doc = ./pantheon.xml;
+    doc = ./pantheon.md;
     maintainers = teams.pantheon.members;
   };
 
@@ -26,10 +26,10 @@ in
     services.pantheon = {
 
       contractor = {
-         enable = mkEnableOption "contractor, a desktop-wide extension service used by Pantheon";
+         enable = mkEnableOption (lib.mdDoc "contractor, a desktop-wide extension service used by Pantheon");
       };
 
-      apps.enable = mkEnableOption "Pantheon default applications";
+      apps.enable = mkEnableOption (lib.mdDoc "Pantheon default applications");
 
     };
 
@@ -76,7 +76,7 @@ in
         description = lib.mdDoc "List of packages for which gsettings are overridden.";
       };
 
-      debug = mkEnableOption "gnome-session debug messages";
+      debug = mkEnableOption (lib.mdDoc "gnome-session debug messages");
 
     };
 
@@ -250,10 +250,10 @@ in
       programs.bash.vteIntegration = mkDefault true;
       programs.zsh.vteIntegration = mkDefault true;
 
-      # Harmonize Qt5 applications under Pantheon
-      qt5.enable = true;
-      qt5.platformTheme = "gnome";
-      qt5.style = "adwaita";
+      # Harmonize Qt applications under Pantheon
+      qt.enable = true;
+      qt.platformTheme = "gnome";
+      qt.style = "adwaita";
 
       # Default Fonts
       fonts.fonts = with pkgs; [
@@ -285,7 +285,7 @@ in
         elementary-music
         elementary-photos
         elementary-screenshot
-        elementary-tasks
+        # elementary-tasks
         elementary-terminal
         elementary-videos
         epiphany

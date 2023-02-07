@@ -14,6 +14,7 @@
 , config
 , ocl-icd
 , buildPackages
+, qimgv
 
 , enableJPEG ? true
 , libjpeg
@@ -76,20 +77,20 @@
 }:
 
 let
-  version = "4.5.4";
+  version = "4.7.0";
 
   src = fetchFromGitHub {
     owner = "opencv";
     repo = "opencv";
     rev = version;
-    sha256 = "sha256-eIESkc/yYiZZ5iY4t/rAPd+jfjuMYR3srCBC4fO3g70=";
+    sha256 = "sha256-jUeGsu8+jzzCnIFbVMCW8DcUeGv/t1yCY/WXyW+uGDI=";
   };
 
   contribSrc = fetchFromGitHub {
     owner = "opencv";
     repo = "opencv_contrib";
     rev = version;
-    sha256 = "sha256-RkCIGukZ8KJkmVZQAZTWdVcVKD2I3NcfGShcqzKhQD0=";
+    sha256 = "sha256-meya0J3RdOIeMM46e/6IOVwrKn3t/c0rhwP2WQaybkE=";
   };
 
   # Contrib must be built in order to enable Tesseract support:
@@ -177,7 +178,7 @@ let
     dst = ".cache/ade";
   };
 
-  # See opencv/modules/wechat_qrcode/CMakeLists.txt
+  # See opencv_contrib/modules/wechat_qrcode/CMakeLists.txt
   wechat_qrcode = {
     src = fetchFromGitHub {
       owner = "opencv";
@@ -365,7 +366,12 @@ stdenv.mkDerivation {
     popd
   '';
 
-  passthru = lib.optionalAttrs enablePython { pythonPath = [ ]; };
+  passthru = {
+    tests = {
+      inherit qimgv;
+      inherit (gst_all_1) gst-plugins-bad;
+    } // lib.optionalAttrs (!enablePython) { pythonEnabled = pythonPackages.opencv4; };
+  } // lib.optionalAttrs enablePython { pythonPath = [ ]; };
 
   meta = with lib; {
     description = "Open Computer Vision Library with more than 500 algorithms";

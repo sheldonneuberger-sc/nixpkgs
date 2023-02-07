@@ -14,7 +14,7 @@
 
 buildPythonPackage rec {
   pname = "dropbox";
-  version = "11.33.0";
+  version = "11.36.0";
   format = "setuptools";
 
   disabled = pythonOlder "3.7";
@@ -24,7 +24,7 @@ buildPythonPackage rec {
     owner = "dropbox";
     repo = "dropbox-sdk-python";
     rev = "refs/tags/v${version}";
-    hash = "sha256-re1TYujoLWjvDE0/ikTMQmXufdS1Q5IMViiFY2/QRMw=";
+    hash = "sha256-J2AaGkD4TMDcVzTtdcNH0bgy6de+BRjYdtTaRL3lYrs=";
   };
 
   propagatedBuildInputs = [
@@ -34,7 +34,7 @@ buildPythonPackage rec {
     stone
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     mock
     pytest-mock
     pytestCheckHook
@@ -77,6 +77,7 @@ buildPythonPackage rec {
   meta = with lib; {
     description = "Python library for Dropbox's HTTP-based Core and Datastore APIs";
     homepage = "https://github.com/dropbox/dropbox-sdk-python";
+    changelog = "https://github.com/dropbox/dropbox-sdk-python/releases/tag/v${version}";
     license = licenses.mit;
     maintainers = with maintainers; [ sfrijters ];
   };

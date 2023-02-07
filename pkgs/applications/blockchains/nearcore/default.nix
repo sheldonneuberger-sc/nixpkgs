@@ -4,7 +4,7 @@
 }:
 rustPlatform.buildRustPackage rec {
   pname = "nearcore";
-  version = "1.28.0";
+  version = "1.30.0";
 
   # https://github.com/near/nearcore/tags
   src = fetchFromGitHub {
@@ -13,10 +13,10 @@ rustPlatform.buildRustPackage rec {
     # there is also a branch for this version number, so we need to be explicit
     rev = "refs/tags/${version}";
 
-    sha256 = "sha256-DRVlD74XTYgy3GeUd/7OIl2aie8nEJLmrmmkwPRkrA8=";
+    sha256 = "sha256-Co8896RojUf/R8ZiRn7zSO1AWH7x5rYom6TbGohH1KM=";
   };
 
-  cargoSha256 = "sha256-hTqje17EdVkgqReuLnizaK3cBJuqXJXC6x5NuoKJLbs=";
+  cargoSha256 = "sha256-M+vhLBXsd+R97Sh5s6jFzon/47XohJeQKh//9QP6PXw=";
   cargoPatches = [ ./0001-make-near-test-contracts-optional.patch ];
 
   postPatch = ''
@@ -42,13 +42,11 @@ rustPlatform.buildRustPackage rec {
   nativeBuildInputs = [
     pkg-config
     protobuf
+    rustPlatform.bindgenHook
   ];
 
   # fat LTO requires ~3.4GB RAM
   requiredSystemFeatures = [ "big-parallel" ];
-
-  LIBCLANG_PATH = "${llvmPackages.libclang.lib}/lib";
-  BINDGEN_EXTRA_CLANG_ARGS = "-isystem ${llvmPackages.libclang.lib}/lib/clang/${lib.getVersion llvmPackages.clang}/include";
 
   meta = with lib; {
     description = "Reference client for NEAR Protocol";

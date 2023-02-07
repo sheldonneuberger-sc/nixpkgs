@@ -18,12 +18,12 @@ let
     in
     lib.concatStrings (lib.mapAttrsToList toArg args);
 
-  isPathType = x: lib.strings.isCoercibleToString x && builtins.substring 0 1 (toString x) == "/";
+  isPathType = x: lib.types.path.check x;
 
 in
 {
   options.services.self-deploy = {
-    enable = lib.mkEnableOption "self-deploy";
+    enable = lib.mkEnableOption (lib.mdDoc "self-deploy");
 
     nixFile = lib.mkOption {
       type = lib.types.path;
@@ -139,6 +139,8 @@ in
 
       path = with pkgs; [
         git
+        gnutar
+        gzip
         nix
       ] ++ lib.optionals (cfg.switchCommand == "boot") [ systemd ];
 

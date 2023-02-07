@@ -1,5 +1,6 @@
 { lib
 , buildPythonPackage
+, setuptools-scm
 , pythonOlder
 , fetchFromGitHub
 , pytestCheckHook
@@ -11,8 +12,8 @@
 
 buildPythonPackage rec {
   pname = "galois";
-  version = "0.0.32";
-  format = "setuptools";
+  version = "0.3.2";
+  format = "pyproject";
 
   disabled = pythonOlder "3.7";
 
@@ -20,8 +21,14 @@ buildPythonPackage rec {
     owner = "mhostetter";
     repo = "galois";
     rev = "refs/tags/v${version}";
-    sha256 = "sha256-+cxRLrfqk3N9pWKCVsTxruZwMYZ5dQyKJRnrb8y+ECM=";
+    sha256 = "sha256-8YxC0QYZqgUIKlYLXnm5+tfojQOmOX63dD7cxBO+0Gg=";
   };
+
+  SETUPTOOLS_SCM_PRETEND_VERSION = version;
+
+  nativeBuildInputs = [
+    setuptools-scm
+  ];
 
   propagatedBuildInputs = [
     numpy
@@ -29,14 +36,15 @@ buildPythonPackage rec {
     typing-extensions
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
     pytest-xdist
   ];
 
   postPatch = ''
-     substituteInPlace setup.cfg \
-       --replace "numpy >= 1.18.4, < 1.23" "numpy >= 1.18.4"
+     substituteInPlace pyproject.toml \
+       --replace "numpy >= 1.18.4, < 1.24" "numpy >= 1.18.4" \
+       --replace "numba >= 0.53, < 0.57" "numba >= 0.53" \
     '';
 
   pythonImportsCheck = [ "galois" ];

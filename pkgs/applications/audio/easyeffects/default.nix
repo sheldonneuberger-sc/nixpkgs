@@ -3,9 +3,11 @@
 , desktop-file-utils
 , fetchFromGitHub
 , calf
+, fftw
 , fftwFloat
-, fmt_8
+, fmt_9
 , glib
+, gsl
 , gtk4
 , itstool
 , libadwaita
@@ -23,9 +25,9 @@
 , nlohmann_json
 , pipewire
 , pkg-config
-, python3
 , rnnoise
 , rubberband
+, speex
 , speexdsp
 , tbb
 , wrapGAppsHook4
@@ -35,13 +37,13 @@
 
 stdenv.mkDerivation rec {
   pname = "easyeffects";
-  version = "6.2.8";
+  version = "7.0.0";
 
   src = fetchFromGitHub {
     owner = "wwmm";
     repo = "easyeffects";
     rev = "v${version}";
-    sha256 = "sha256-iADECt0m74Irm3JEQgZVLCr6Z2SKATAh9SvPwzd7HCo=";
+    sha256 = "sha256-SjhJj5kClPd8DT1vzbSdqJ9AJw0XiX9Q8/R8SDnxGPQ=";
   };
 
   nativeBuildInputs = [
@@ -50,14 +52,15 @@ stdenv.mkDerivation rec {
     meson
     ninja
     pkg-config
-    python3
     wrapGAppsHook4
   ];
 
   buildInputs = [
+    fftw
     fftwFloat
-    fmt_8
+    fmt_9
     glib
+    gsl
     gtk4
     libadwaita
     libbs2b
@@ -71,15 +74,11 @@ stdenv.mkDerivation rec {
     pipewire
     rnnoise
     rubberband
+    speex
     speexdsp
     tbb
     zita-convolver
   ];
-
-  postPatch = ''
-    chmod +x meson_post_install.py
-    patchShebangs meson_post_install.py
-  '';
 
   preFixup =
     let

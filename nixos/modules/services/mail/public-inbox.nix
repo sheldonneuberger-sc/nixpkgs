@@ -143,7 +143,7 @@ in
 
 {
   options.services.public-inbox = {
-    enable = mkEnableOption "the public-inbox mail archiver";
+    enable = mkEnableOption (lib.mdDoc "the public-inbox mail archiver");
     package = mkOption {
       type = types.package;
       default = pkgs.public-inbox;
@@ -218,10 +218,10 @@ in
       }));
     };
     imap = {
-      enable = mkEnableOption "the public-inbox IMAP server";
+      enable = mkEnableOption (lib.mdDoc "the public-inbox IMAP server");
     } // publicInboxDaemonOptions "imap" 993;
     http = {
-      enable = mkEnableOption "the public-inbox HTTP server";
+      enable = mkEnableOption (lib.mdDoc "the public-inbox HTTP server");
       mounts = mkOption {
         type = with types; listOf str;
         default = [ "/" ];
@@ -247,16 +247,16 @@ in
       };
     };
     mda = {
-      enable = mkEnableOption "the public-inbox Mail Delivery Agent";
+      enable = mkEnableOption (lib.mdDoc "the public-inbox Mail Delivery Agent");
       args = mkOption {
         type = with types; listOf str;
         default = [];
         description = lib.mdDoc "Command-line arguments to pass to {manpage}`public-inbox-mda(1)`.";
       };
     };
-    postfix.enable = mkEnableOption "the integration into Postfix";
+    postfix.enable = mkEnableOption (lib.mdDoc "the integration into Postfix");
     nntp = {
-      enable = mkEnableOption "the public-inbox NNTP server";
+      enable = mkEnableOption (lib.mdDoc "the public-inbox NNTP server");
     } // publicInboxDaemonOptions "nntp" 563;
     spamAssassinRules = mkOption {
       type = with types; nullOr path;
@@ -275,7 +275,11 @@ in
           default = {};
           description = lib.mdDoc "public inboxes";
           type = types.submodule {
-            freeformType = with types; /*inbox name*/attrsOf (/*inbox option name*/attrsOf /*inbox option value*/iniAtom);
+            # Keeping in line with the tradition of unnecessarily specific types, allow users to set
+            # freeform settings either globally under the `publicinbox` section, or for specific
+            # inboxes through additional nesting.
+            freeformType = with types; attrsOf (oneOf [ iniAtom (attrsOf iniAtom) ]);
+
             options.css = mkOption {
               type = with types; listOf str;
               default = [];
@@ -339,7 +343,7 @@ in
         };
       };
     };
-    openFirewall = mkEnableOption "opening the firewall when using a port option";
+    openFirewall = mkEnableOption (lib.mdDoc "opening the firewall when using a port option");
   };
   config = mkIf cfg.enable {
     assertions = [

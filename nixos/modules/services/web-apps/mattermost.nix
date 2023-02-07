@@ -101,12 +101,12 @@ in
 {
   options = {
     services.mattermost = {
-      enable = mkEnableOption "Mattermost chat server";
+      enable = mkEnableOption (lib.mdDoc "Mattermost chat server");
 
       package = mkOption {
         type = types.package;
         default = pkgs.mattermost;
-        defaultText = "pkgs.mattermost";
+        defaultText = lib.literalExpression "pkgs.mattermost";
         description = lib.mdDoc "Mattermost derivation to use.";
       };
 
@@ -170,7 +170,7 @@ in
         type = types.attrs;
         default = { };
         description = lib.mdDoc ''
-          Addtional configuration options as Nix attribute set in config.json schema.
+          Additional configuration options as Nix attribute set in config.json schema.
         '';
       };
 
@@ -234,11 +234,11 @@ in
       };
 
       matterircd = {
-        enable = mkEnableOption "Mattermost IRC bridge";
+        enable = mkEnableOption (lib.mdDoc "Mattermost IRC bridge");
         package = mkOption {
           type = types.package;
           default = pkgs.matterircd;
-          defaultText = "pkgs.matterircd";
+          defaultText = lib.literalExpression "pkgs.matterircd";
           description = lib.mdDoc "matterircd derivation to use.";
         };
         parameters = mkOption {

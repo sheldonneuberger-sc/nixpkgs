@@ -28,7 +28,7 @@ let
     '');
 
   # Essential config - it's probably not good to have these as option default because
-  # types.attrs doesn't do merging. Let's merge explicitly, can still be overriden if
+  # types.attrs doesn't do merging. Let's merge explicitly, can still be overridden if
   # user desires.
   defaultCfg = {
     hosts = {
@@ -46,7 +46,7 @@ let
 in
 {
   options.services.jitsi-meet = with types; {
-    enable = mkEnableOption "Jitsi Meet - Secure, Simple and Scalable Video Conferences";
+    enable = mkEnableOption (lib.mdDoc "Jitsi Meet - Secure, Simple and Scalable Video Conferences");
 
     hostName = mkOption {
       type = str;
@@ -159,7 +159,7 @@ in
       '';
     };
 
-    caddy.enable = mkEnableOption "Whether to enable caddy reverse proxy to expose jitsi-meet";
+    caddy.enable = mkEnableOption (lib.mdDoc "Whether to enable caddy reverse proxy to expose jitsi-meet");
 
     prosody.enable = mkOption {
       type = bool;
@@ -451,6 +451,6 @@ in
     };
   };
 
-  meta.doc = ./jitsi-meet.xml;
+  meta.doc = ./jitsi-meet.md;
   meta.maintainers = lib.teams.jitsi.members;
 }

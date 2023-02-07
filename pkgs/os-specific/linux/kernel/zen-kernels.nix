@@ -4,21 +4,21 @@ let
   # comments with variant added for update script
   # ./update-zen.py zen
   zenVariant = {
-    version = "5.19.4"; #zen
+    version = "6.1.9"; #zen
     suffix = "zen1"; #zen
-    sha256 = "0px5br9220m8s6y6qzk29i0ksmy43h4652d9xx5y2jb5idwf2sj4"; #zen
+    sha256 = "0fsmcjsawxr32fxhpp6sgwfwwj8kqymy0rc6vh4qli42fqmwdjgv"; #zen
     isLqx = false;
   };
   # ./update-zen.py lqx
   lqxVariant = {
-    version = "5.19.4"; #lqx
+    version = "6.1.9"; #lqx
     suffix = "lqx1"; #lqx
-    sha256 = "1vvc2c35w1xz8zkm79cbcdhwb7dkqxd835w422my5mbi7vhcx7jq"; #lqx
+    sha256 = "167qr1mxsr5llmzixsijsn72d8jyphhgg2k8qsf369m7y58sz0s9"; #lqx
     isLqx = true;
   };
   zenKernelsFor = { version, suffix, sha256, isLqx }: buildLinux (args // {
     inherit version;
-    modDirVersion = "${lib.concatStringsSep "." (lib.take 3 (lib.splitVersion version ++ [ "0" "0" ]))}-${suffix}";
+    modDirVersion = lib.versions.pad 3 "${version}-${suffix}";
     isZen = true;
 
     src = fetchFromGitHub {

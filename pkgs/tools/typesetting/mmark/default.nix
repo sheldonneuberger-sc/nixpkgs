@@ -2,16 +2,16 @@
 
 buildGoModule rec {
   pname = "mmark";
-  version = "2.2.26";
+  version = "2.2.30";
 
   src = fetchFromGitHub {
     owner = "mmarkdown";
     repo = "mmark";
     rev = "v${version}";
-    sha256 = "sha256-DiT2MkVM2DWp8dVr8I3Qt6iymHJPW3VEIaX+ACrDVo8=";
+    sha256 = "sha256-14SGA3a72i+HYptTEpxf4YiLXZzZ1R/t1agvm3ie4g8=";
   };
 
-  vendorSha256 = "sha256-vhSrHh1wmIK3H5p5Q5QznSVainkZByrW+Nz81J9Va88=";
+  vendorSha256 = "sha256-GjR9cOGLB6URHQi+qcyNbP7rm0+y4wypvgUxgJzIgGQ=";
 
   ldflags = [ "-s" "-w" ];
 

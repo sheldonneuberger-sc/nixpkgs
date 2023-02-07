@@ -1,24 +1,40 @@
-{ lib, buildGoModule, fetchFromGitHub }:
+{ lib
+, buildGoModule
+, fetchFromGitHub
+, installShellFiles
+}:
 
 buildGoModule rec {
   pname = "changie";
-  version = "1.8.0";
+  version = "1.11.1";
 
   src = fetchFromGitHub {
     rev = "v${version}";
     owner = "miniscruff";
     repo = pname;
-    sha256 = "sha256-VzrSfigpkOvgywq0dHIXZS2If8qc8HCo51FzopKORwM=";
+    sha256 = "sha256-IZiGNmVEOJf7sqJHXCXxptfy79mSnyyyiqf+oS41MgI=";
   };
 
-  vendorSha256 = "sha256-+Q0vNMd8wFz+9bOPfqdPpN2brnUmIf46/9rUYsCTUrQ=";
+  vendorSha256 = "sha256-0/3Ou8z6yLWhc81hdN2gkaFLLlKQWUGcIdvRHVLTrjQ=";
+
+  nativeBuildInputs = [
+    installShellFiles
+  ];
+
+  ldflags = [ "-s" "-w" "-X=main.version=${version}" ];
+
+  postInstall = ''
+    installShellCompletion --cmd changie \
+      --bash <($out/bin/changie completion bash) \
+      --fish <($out/bin/changie completion fish) \
+      --zsh <($out/bin/changie completion zsh)
+  '';
 
   meta = with lib; {
-    homepage = "https://changie.dev";
     description = "Automated changelog tool for preparing releases with lots of customization options";
+    homepage = "https://changie.dev";
+    changelog = "https://github.com/miniscruff/changie/blob/v${version}/CHANGELOG.md";
     license = licenses.mit;
-    platforms = platforms.unix;
-    maintainers = with maintainers; [ matthiasbeyer ];
+    maintainers = with maintainers; [ figsoda matthiasbeyer ];
   };
 }
-

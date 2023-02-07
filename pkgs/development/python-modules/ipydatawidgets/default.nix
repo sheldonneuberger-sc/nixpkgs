@@ -14,13 +14,13 @@
 
 buildPythonPackage rec {
   pname = "ipydatawidgets";
-  version = "4.3.1.post1";
+  version = "4.3.2";
 
   disabled = isPy27;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-aYGrzNmmupSuf2FuGBqabaPrFUM+VrtfFAQeXBEaJR8=";
+    sha256 = "sha256-LyuZf2Vp0+4fT3412wyx2gjAd7IaiPHAHFn1uYajGqY=";
   };
 
   nativeBuildInputs = [
@@ -36,7 +36,7 @@ buildPythonPackage rec {
     traittypes
   ];
 
-  checkInputs = [ pytest pytest-cov nbval ];
+  nativeCheckInputs = [ pytest pytest-cov nbval ];
 
   checkPhase = "pytest ipydatawidgets/tests";
 

@@ -1,9 +1,10 @@
 { stdenv, buildPackages, lib
 , fetchurl, fetchpatch, fetchFromSavannah, fetchFromGitHub
-, zlib, openssl, gdbm, ncurses, readline, groff, libyaml, libffi, jemalloc, autoreconfHook, bison
+, zlib, gdbm, ncurses, readline, groff, libyaml, libffi, jemalloc, autoreconfHook, bison
 , autoconf, libiconv, libobjc, libunwind, Foundation
 , buildEnv, bundler, bundix
 , makeWrapper, buildRubyGem, defaultGemConfig, removeReferencesTo
+, openssl, openssl_1_1
 } @ args:
 
 let
@@ -26,7 +27,7 @@ let
       , useRailsExpress ? true
       , rubygemsSupport ? true
       , zlib, zlibSupport ? true
-      , openssl, opensslSupport ? true
+      , openssl, openssl_1_1, opensslSupport ? true
       , gdbm, gdbmSupport ? true
       , ncurses, readline, cursesSupport ? true
       , groff, docSupport ? true
@@ -47,7 +48,7 @@ let
       , buildEnv, bundler, bundix
       , libiconv, libobjc, libunwind, Foundation
       , makeWrapper, buildRubyGem, defaultGemConfig
-      , baseRuby ? buildPackages.ruby.override {
+      , baseRuby ? buildPackages.ruby_3_1.override {
           useRailsExpress = false;
           docSupport = false;
           rubygemsSupport = false;
@@ -75,7 +76,8 @@ let
           ++ (op fiddleSupport libffi)
           ++ (ops cursesSupport [ ncurses readline ])
           ++ (op zlibSupport zlib)
-          ++ (op opensslSupport openssl)
+          ++ (op (lib.versionOlder ver.majMin "3.0" && opensslSupport) openssl_1_1)
+          ++ (op (atLeast30 && opensslSupport) openssl_1_1)
           ++ (op gdbmSupport gdbm)
           ++ (op yamlSupport libyaml)
           # Looks like ruby fails to build on darwin without readline even if curses
@@ -185,11 +187,17 @@ let
               sed -i '/CC_VERSION_MESSAGE/d' $rbConfig
             ''
           }
+
+          # Allow to override compiler. This is important for cross compiling as
+          # we need to set a compiler that is different from the build one.
+          sed -i 's/CONFIG\["CC"\] = "\(.*\)"/CONFIG["CC"] = if ENV["CC"].nil? || ENV["CC"].empty? then "\1" else ENV["CC"] end/'  "$rbConfig"
+
           # Remove unnecessary external intermediate files created by gems
-          extMakefiles=$(find $out/lib/ruby/gems -name Makefile)
+          extMakefiles=$(find $out/${passthru.gemPath} -name Makefile)
           for makefile in $extMakefiles; do
             make -C "$(dirname "$makefile")" distclean
           done
+          find "$out/${passthru.gemPath}" -name gem_make.out -delete
           # Bundler tries to create this directory
           mkdir -p $out/nix-support
           cat > $out/nix-support/setup-hook <<EOF
@@ -220,6 +228,21 @@ let
             $rbConfig $out/lib/libruby*
         '';
 
+        installCheckPhase = ''
+          overriden_cc=$(CC=foo $out/bin/ruby -rrbconfig -e 'puts RbConfig::CONFIG["CC"]')
+          if [[ "$overriden_cc" != "foo" ]]; then
+             echo "CC cannot be overwritten: $overriden_cc != foo" >&2
+             false
+          fi
+
+          fallback_cc=$(unset CC; $out/bin/ruby -rrbconfig -e 'puts RbConfig::CONFIG["CC"]')
+          if [[ "$fallback_cc" != "$CC" ]]; then
+             echo "CC='$fallback_cc' should be '$CC' by default" >&2
+             false
+          fi
+        '';
+        doInstallCheck = true;
+
         disallowedRequisites = op (!jitSupport) stdenv.cc.cc
           ++ op useBaseRuby baseRuby;
 
@@ -245,7 +268,7 @@ let
             inherit lib stdenv makeWrapper buildRubyGem buildEnv;
             gemConfig = defaultGemConfig;
             ruby = self;
-          }) withPackages gems;
+          }) withPackages buildGems gems;
 
         } // lib.optionalAttrs useBaseRuby {
           inherit baseRuby;

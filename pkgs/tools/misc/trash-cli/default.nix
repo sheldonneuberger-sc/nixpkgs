@@ -2,18 +2,18 @@
 
 python3Packages.buildPythonApplication rec {
   pname = "trash-cli";
-  version = "0.22.8.21";
+  version = "0.22.10.20";
 
   src = fetchFromGitHub {
     owner = "andreafrancia";
     repo = "trash-cli";
     rev = version;
-    hash = "sha256-jNjM84xl+gS3l11XgYidLKZskQxx55kw051FIsJQExs=";
+    hash = "sha256-NnFOe471GxcjpTwpsoxKaWiw4lW4tUPIM+WpzCsEdkI=";
   };
 
-  propagatedBuildInputs = [ python3Packages.psutil ];
+  propagatedBuildInputs = with python3Packages; [ psutil six ];
 
-  checkInputs = with python3Packages; [
+  nativeCheckInputs = with python3Packages; [
     mock
     pytestCheckHook
   ];

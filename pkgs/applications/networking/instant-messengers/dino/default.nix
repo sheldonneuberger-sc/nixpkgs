@@ -19,13 +19,13 @@
 
 stdenv.mkDerivation rec {
   pname = "dino";
-  version = "0.3.0";
+  version = "0.3.1";
 
   src = fetchFromGitHub {
     owner = "dino";
     repo = "dino";
     rev = "v${version}";
-    sha256 = "sha256-L5a5QlF9qlr4X/hGTabbbvOE5J1x/UVneWl/BRAa29Q=";
+    sha256 = "sha256-wjSgs1mUMV7j/8ZeXqWs8aOeWvJHwKziUfbtOC1HS3s=";
   };
 
   nativeBuildInputs = [
@@ -74,6 +74,9 @@ stdenv.mkDerivation rec {
   ];
 
   cmakeFlags = ["-DBUILD_TESTS=yes"];
+
+  # Undefined symbols for architecture arm64: "_gpg_strerror"
+  NIX_LDFLAGS = lib.optionalString stdenv.isDarwin "-lgpg-error";
 
   doCheck = true;
   checkPhase = ''

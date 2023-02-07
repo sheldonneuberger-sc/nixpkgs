@@ -2,6 +2,7 @@
 , stdenv
 , bokeh
 , buildPythonPackage
+, click
 , cloudpickle
 , distributed
 , fastparquet
@@ -26,19 +27,20 @@
 
 buildPythonPackage rec {
   pname = "dask";
-  version = "2022.7.0";
+  version = "2023.1.0";
   format = "setuptools";
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "dask";
     repo = pname;
     rev = version;
-    hash = "sha256-O5/TNeta0V0v9WTpPmF/kJMJ40ANo6rcRtzurr5/SwA=";
+    hash = "sha256-avyrKBAPyYZBNgItnkNCferqb6+4yeGpBAZhSkL/fFA=";
   };
 
   propagatedBuildInputs = [
+    click
     cloudpickle
     fsspec
     packaging
@@ -67,7 +69,7 @@ buildPythonPackage rec {
     ];
   };
 
-  checkInputs = [
+  nativeCheckInputs = [
     fastparquet
     pyarrow
     pytestCheckHook
@@ -97,9 +99,8 @@ buildPythonPackage rec {
     "--reruns 3"
     # Don't run tests that require network access
     "-m 'not network'"
-    # Ignore warning about pyarrow 5.0.0 feautres
-    "-W"
-    "ignore::FutureWarning"
+    # DeprecationWarning: The 'sym_pos' keyword is deprecated and should be replaced by using 'assume_a = "pos"'. 'sym_pos' will be removed in SciPy 1.11.0.
+    "-W" "ignore::DeprecationWarning"
   ];
 
   disabledTests = lib.optionals stdenv.isDarwin [
@@ -110,6 +111,8 @@ buildPythonPackage rec {
     "test_read_dir_nometa"
   ] ++ [
     "test_chunksize_files"
+    # TypeError: 'ArrowStringArray' with dtype string does not support reduction 'min'
+    "test_set_index_string"
   ];
 
   __darwinAllowLocalNetworking = true;

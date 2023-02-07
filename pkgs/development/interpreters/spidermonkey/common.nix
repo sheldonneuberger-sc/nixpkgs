@@ -42,7 +42,7 @@ stdenv.mkDerivation (finalAttrs: rec {
     inherit hash;
   };
 
-  patches = lib.optional (lib.versionOlder version "91") [
+  patches = lib.optionals (lib.versionOlder version "91") [
     # Fix build failure on armv7l using Debian patch
     # Upstream bug: https://bugzilla.mozilla.org/show_bug.cgi?id=1526653
     (fetchpatch {
@@ -75,6 +75,9 @@ stdenv.mkDerivation (finalAttrs: rec {
       url = "https://hg.mozilla.org/releases/mozilla-esr102/raw-rev/1fa20fb474f5d149cc32d98df169dee5e6e6861b";
       sha256 = "sha256-eCisKjNxy9SLr9KoEE2UB26BflUknnR7PIvnpezsZeA=";
     })
+  ] ++ lib.optionals (lib.versionAtLeast version "91" && stdenv.hostPlatform.system == "i686-linux") [
+    # Fixes i686 build, https://bugzilla.mozilla.org/show_bug.cgi?id=1729459
+    ./fix-float-i686.patch
   ];
 
   nativeBuildInputs = [
@@ -145,6 +148,9 @@ stdenv.mkDerivation (finalAttrs: rec {
   # cc-rs insists on using -mabi=lp64 (soft-float) for riscv64,
   # while we have a double-float toolchain
   NIX_CFLAGS_COMPILE = lib.optionalString (with stdenv.hostPlatform; isRiscV && is64bit && lib.versionOlder version "91") "-mabi=lp64d";
+
+  # https://github.com/NixOS/nixpkgs/issues/201254
+  NIX_LDFLAGS = if (with stdenv; isAarch64 && isLinux) then [ "-lgcc" ] else null;
 
   postPatch = lib.optionalString (lib.versionOlder version "102") ''
     # This patch is a manually applied fix of

@@ -283,6 +283,7 @@ def update_plugins():
     """Update plugins to their latest revision."""
     plugins = [
         {'name': 'discourse-assign'},
+        {'name': 'discourse-bbcode-color'},
         {'name': 'discourse-calendar'},
         {'name': 'discourse-canned-replies'},
         {'name': 'discourse-chat-integration'},
@@ -293,8 +294,9 @@ def update_plugins():
         {'name': 'discourse-ldap-auth', 'owner': 'jonmbake'},
         {'name': 'discourse-math'},
         {'name': 'discourse-migratepassword', 'owner': 'discoursehosting'},
-        {'name': 'discourse-prometheus'},
         {'name': 'discourse-openid-connect'},
+        {'name': 'discourse-prometheus'},
+        {'name': 'discourse-reactions'},
         {'name': 'discourse-saved-searches'},
         {'name': 'discourse-solved'},
         {'name': 'discourse-spoiler-alert'},

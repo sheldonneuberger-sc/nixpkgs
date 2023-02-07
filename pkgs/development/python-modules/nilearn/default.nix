@@ -1,22 +1,23 @@
-{ lib, buildPythonPackage, fetchPypi, pytestCheckHook, matplotlib
+{ lib, buildPythonPackage, fetchPypi, pytestCheckHook, lxml, matplotlib
 , nibabel, numpy, pandas, scikit-learn, scipy, joblib, requests }:
 
 buildPythonPackage rec {
   pname = "nilearn";
-  version = "0.9.1";
+  version = "0.9.2";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-3YIbT/KzuH9eSwNOoPlfzkN1rOWG3o7Rfmpme94ZJdc=";
+    sha256 = "sha256-jajTg12SzXuKbMkkVaSJ1+f1mUz2T8cbzmU+NidzueQ=";
   };
 
-  checkInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [ pytestCheckHook ];
   disabledTests = [ "test_clean_confounds" ];  # https://github.com/nilearn/nilearn/issues/2608
   # do subset of tests which don't fetch resources
   pytestFlagsArray = [ "nilearn/connectome/tests" ];
 
   propagatedBuildInputs = [
     joblib
+    lxml
     matplotlib
     nibabel
     numpy

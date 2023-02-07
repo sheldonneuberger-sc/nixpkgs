@@ -3,7 +3,7 @@
 , fetchFromGitHub
 , pytestCheckHook
 , pythonOlder
-, pytorch
+, torch
 , torchvision
 }:
 
@@ -22,11 +22,11 @@ buildPythonPackage rec {
   };
 
   propagatedBuildInputs = [
-    pytorch
+    torch
     torchvision
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
   ];
 

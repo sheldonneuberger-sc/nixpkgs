@@ -2,16 +2,16 @@
 
 buildGoModule rec {
   pname = "mutagen-compose";
-  version = "0.15.1";
+  version = "0.16.4";
 
   src = fetchFromGitHub {
     owner = "mutagen-io";
     repo = pname;
     rev = "v${version}";
-    sha256 = "sha256-vdgAil/88fl5/UhsbbAWrxh/YUiGbyXj4pqZFv4YwHc=";
+    sha256 = "sha256-V+9TSzCwBITpG7j3mOyPMQN1VwYSPRFgOBPiF3LZVmk=";
   };
 
-  vendorSha256 = "sha256-qb0auYQJHnpGafonWoYq3tax6uLdOCIdz+oZ7I6bytk=";
+  vendorHash = "sha256-m6XCXwns2if7Odhc2nFbXbGhif4vElrVjcBX0DULkCE=";
 
   doCheck = false;
 

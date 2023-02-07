@@ -1,26 +1,23 @@
 { lib
-, stdenv
-, fetchFromGitHub
 , rustPlatform
+, fetchCrate
 , pkg-config
 , openssl
+, stdenv
 , CoreServices
 , Security
 }:
+
 rustPlatform.buildRustPackage rec {
   pname = "zine";
-  version = "0.6.0";
+  version = "0.10.0";
 
-  src = fetchFromGitHub {
-    owner = "zineland";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-Pd/UAg6O9bOvrdvbY46Vf8cxFzjonEwcwPaaW59vH6E=";
+  src = fetchCrate {
+    inherit pname version;
+    sha256 = "sha256-hkBQ9WaWJrDhGAt35yueINutc7sAMbgbr8Iw5h0Ey4I=";
   };
 
-  cargoPatches = [ ./Cargo.lock.patch ]; # Repo does not provide Cargo.lock
-
-  cargoSha256 = "sha256-qpzBDyNSZblmdimnnL4T/wS+6EXpduJ1U2+bfxM7piM=";
+  cargoSha256 = "sha256-rY7WHgd5wyx7TUgJamzre8HjeI0BRtaM14V3doCkfVY=";
 
   nativeBuildInputs = [
     pkg-config
@@ -32,7 +29,8 @@ rustPlatform.buildRustPackage rec {
   meta = with lib; {
     description = "A simple and opinionated tool to build your own magazine";
     homepage = "https://github.com/zineland/zine";
+    changelog = "https://github.com/zineland/zine/releases/tag/v${version}";
     license = licenses.asl20;
-    maintainers = with maintainers; [ dit7ya ];
+    maintainers = with maintainers; [ dit7ya figsoda ];
   };
 }

@@ -22,13 +22,13 @@ in {
 
   options.services.multipath = with types; {
 
-    enable = mkEnableOption "the device mapper multipath (DM-MP) daemon";
+    enable = mkEnableOption (lib.mdDoc "the device mapper multipath (DM-MP) daemon");
 
     package = mkOption {
       type = package;
       description = lib.mdDoc "multipath-tools package to use";
       default = pkgs.multipath-tools;
-      defaultText = "pkgs.multipath-tools";
+      defaultText = lib.literalExpression "pkgs.multipath-tools";
     };
 
     devices = mkOption {
@@ -516,7 +516,6 @@ in {
         ${optionalString (!isNull defaults) ''
           defaults {
           ${indentLines 2 defaults}
-            multipath_dir ${cfg.package}/lib/multipath
           }
         ''}
         ${optionalString (!isNull blacklist) ''

@@ -92,7 +92,7 @@ stdenv.mkDerivation rec {
     udev
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     check
     valgrind
   ];
@@ -122,7 +122,6 @@ stdenv.mkDerivation rec {
       libinput-module = nixosTests.libinput;
     };
     updateScript = gitUpdater {
-      inherit pname version;
       patchlevel-unstable = true;
     };
   };

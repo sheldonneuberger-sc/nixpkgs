@@ -102,7 +102,9 @@ let
   # Shell script to start the VM.
   startVM =
     ''
-      #! ${pkgs.runtimeShell}
+      #! ${cfg.host.pkgs.runtimeShell}
+
+      export PATH=${makeBinPath [ cfg.host.pkgs.coreutils ]}''${PATH:+:}$PATH
 
       set -e
 
@@ -209,7 +211,7 @@ let
             ''
               mkdir $out
               diskImage=$out/disk.img
-              ${qemu}/bin/qemu-img create -f qcow2 $diskImage "60M"
+              ${qemu}/bin/qemu-img create -f qcow2 $diskImage "120M"
               ${if cfg.useEFIBoot then ''
                 efiVars=$out/efi-vars.fd
                 cp ${cfg.efi.variables} $efiVars
@@ -223,7 +225,7 @@ let
                       + " -drive if=pflash,format=raw,unit=1,file=$efiVars");
         }
         ''
-          # Create a /boot EFI partition with 60M and arbitrary but fixed GUIDs for reproducibility
+          # Create a /boot EFI partition with 120M and arbitrary but fixed GUIDs for reproducibility
           ${pkgs.gptfdisk}/bin/sgdisk \
             --set-alignment=1 --new=1:34:2047 --change-name=1:BIOSBootPartition --typecode=1:ef02 \
             --set-alignment=512 --largest-new=2 --change-name=2:EFISystem --typecode=2:ef00 \
@@ -463,14 +465,13 @@ in
             type = types.enum [ "host" "guest" ];
             default = "host";
             description =
-              ''
+              lib.mdDoc ''
                 Controls the direction in which the ports are mapped:
 
-                - <literal>"host"</literal> means traffic from the host ports
-                is forwarded to the given guest port.
-
-                - <literal>"guest"</literal> means traffic from the guest ports
-                is forwarded to the given host port.
+                - `"host"` means traffic from the host ports
+                  is forwarded to the given guest port.
+                - `"guest"` means traffic from the guest ports
+                  is forwarded to the given host port.
               '';
           };
           options.proto = mkOption {
@@ -511,19 +512,35 @@ in
         ]
         '';
       description =
-        ''
+        lib.mdDoc ''
           When using the SLiRP user networking (default), this option allows to
           forward ports to/from the host/guest.
 
-          <warning><para>
-            If the NixOS firewall on the virtual machine is enabled, you also
-            have to open the guest ports to enable the traffic between host and
-            guest.
-          </para></warning>
+          ::: {.warning}
+          If the NixOS firewall on the virtual machine is enabled, you also
+          have to open the guest ports to enable the traffic between host and
+          guest.
+          :::
 
-          <note><para>Currently QEMU supports only IPv4 forwarding.</para></note>
+          ::: {.note}
+          Currently QEMU supports only IPv4 forwarding.
+          :::
         '';
     };
+
+    virtualisation.restrictNetwork =
+      mkOption {
+        type = types.bool;
+        default = false;
+        example = true;
+        description =
+          lib.mdDoc ''
+            If this option is enabled, the guest will be isolated, i.e. it will
+            not be able to contact the host and no guest IP packets will be
+            routed over the host to the outside. This option does not affect
+            any explicitly set forwarding rules.
+          '';
+      };
 
     virtualisation.vlans =
       mkOption {
@@ -571,15 +588,29 @@ in
         type = types.str;
         default = "";
         internal = true;
-        description = "Primary IP address used in /etc/hosts.";
+        description = lib.mdDoc "Primary IP address used in /etc/hosts.";
       };
+
+    virtualisation.host.pkgs = mkOption {
+      type = options.nixpkgs.pkgs.type;
+      default = pkgs;
+      defaultText = literalExpression "pkgs";
+      example = literalExpression ''
+        import pkgs.path { system = "x86_64-darwin"; }
+      '';
+      description = lib.mdDoc ''
+        pkgs set to use for the host-specific packages of the vm runner.
+        Changing this to e.g. a Darwin package set allows running NixOS VMs on Darwin.
+      '';
+    };
 
     virtualisation.qemu = {
       package =
         mkOption {
           type = types.package;
-          default = pkgs.qemu_kvm;
-          example = "pkgs.qemu_test";
+          default = cfg.host.pkgs.qemu_kvm;
+          defaultText = literalExpression "config.virtualisation.host.pkgs.qemu_kvm";
+          example = literalExpression "pkgs.qemu_test";
           description = lib.mdDoc "QEMU package to use.";
         };
 
@@ -705,7 +736,7 @@ in
       firmware = mkOption {
         type = types.path;
         default = pkgs.OVMF.firmware;
-        defaultText = "pkgs.OVMF.firmware";
+        defaultText = literalExpression "pkgs.OVMF.firmware";
         description =
           lib.mdDoc ''
             Firmware binary for EFI implementation, defaults to OVMF.
@@ -715,7 +746,7 @@ in
       variables = mkOption {
         type = types.path;
         default = pkgs.OVMF.variables;
-        defaultText = "pkgs.OVMF.variables";
+        defaultText = literalExpression "pkgs.OVMF.variables";
         description =
           lib.mdDoc ''
             Platform-specific flash binary for EFI variables, implementation-dependent to the EFI firmware.
@@ -790,7 +821,7 @@ in
       optional (
         cfg.writableStore &&
         cfg.useNixStoreImage &&
-        opt.writableStore.highestPrio > lib.modules.defaultPriority)
+        opt.writableStore.highestPrio > lib.modules.defaultOverridePriority)
         ''
           You have enabled ${opt.useNixStoreImage} = true,
           without setting ${opt.writableStore} = false.
@@ -842,7 +873,8 @@ in
         # If the disk image appears to be empty, run mke2fs to
         # initialise.
         FSTYPE=$(blkid -o value -s TYPE ${cfg.bootDevice} || true)
-        if test -z "$FSTYPE"; then
+        PARTTYPE=$(blkid -o value -s PTTYPE ${cfg.bootDevice} || true)
+        if test -z "$FSTYPE" -a -z "$PARTTYPE"; then
             mke2fs -t ext4 ${cfg.bootDevice}
         fi
       '';
@@ -918,10 +950,11 @@ in
               else "'guestfwd=${proto}:${guest.address}:${toString guest.port}-" +
                    "cmd:${pkgs.netcat}/bin/nc ${host.address} ${toString host.port}',"
           );
+        restrictNetworkOption = lib.optionalString cfg.restrictNetwork "restrict=on,";
       in
       [
         "-net nic,netdev=user.0,model=virtio"
-        "-netdev user,id=user.0,${forwardingOptions}\"$QEMU_NET_OPTS\""
+        "-netdev user,id=user.0,${forwardingOptions}${restrictNetworkOption}\"$QEMU_NET_OPTS\""
       ];
 
     # FIXME: Consolidate this one day.
@@ -1075,14 +1108,14 @@ in
 
     services.qemuGuest.enable = cfg.qemu.guestAgent.enable;
 
-    system.build.vm = pkgs.runCommand "nixos-vm" {
+    system.build.vm = cfg.host.pkgs.runCommand "nixos-vm" {
       preferLocalBuild = true;
       meta.mainProgram = "run-${config.system.name}-vm";
     }
       ''
         mkdir -p $out/bin
         ln -s ${config.system.build.toplevel} $out/system
-        ln -s ${pkgs.writeScript "run-nixos-vm" startVM} $out/bin/run-${config.system.name}-vm
+        ln -s ${cfg.host.pkgs.writeScript "run-nixos-vm" startVM} $out/bin/run-${config.system.name}-vm
       '';
 
     # When building a regular system configuration, override whatever

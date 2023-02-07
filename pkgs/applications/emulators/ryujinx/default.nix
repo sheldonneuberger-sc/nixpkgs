@@ -1,18 +1,18 @@
 { lib
 , buildDotnetModule
-, fetchFromGitHub
 , dotnetCorePackages
+, stdenvNoCC
+, fetchFromGitHub
+, wrapGAppsHook
 , libX11
 , libgdiplus
 , ffmpeg
-, SDL2_mixer
 , openal
 , libsoundio
 , sndio
 , pulseaudio
 , gtk3
 , gdk-pixbuf
-, wrapGAppsHook
 , vulkan-loader
 , libICE
 , libSM
@@ -22,27 +22,26 @@
 , libXrandr
 , fontconfig
 , glew
+, libGL
+, SDL2
+, SDL2_mixer
 }:
 
 buildDotnetModule rec {
   pname = "ryujinx";
-  version = "1.1.223"; # Based off of the official github actions builds: https://github.com/Ryujinx/Ryujinx/actions/workflows/release.yml
+  version = "1.1.489"; # Based off of the official github actions builds: https://github.com/Ryujinx/Ryujinx/actions/workflows/release.yml
 
   src = fetchFromGitHub {
     owner = "Ryujinx";
     repo = "Ryujinx";
-    rev = "951700fdd8f54fb34ffe8a3fb328a68b5bf37abe";
-    sha256 = "0kzchsxir8wh74rxvp582mci855hbd0vma6yhcc9vpz0zmhi2cpf";
+    rev = "37d27c4c99486312d9a282d7fc056c657efe0848";
+    sha256 = "0h55vv2g9i81km0jzlb62arlky5ci4i45jyxig3znqr1zb4l0a67";
   };
 
-  projectFile = "Ryujinx.sln";
+  dotnet-sdk = dotnetCorePackages.sdk_7_0;
+  dotnet-runtime = dotnetCorePackages.runtime_7_0;
+
   nugetDeps = ./deps.nix;
-
-  dotnetFlags = [ "/p:ExtraDefineConstants=DISABLE_UPDATER" ];
-
-  # TODO: Add the headless frontend. Currently errors on the following:
-  # System.Exception: SDL2 initlaization failed with error "No available video device"
-  executables = [ "Ryujinx" "Ryujinx.Ava" ];
 
   nativeBuildInputs = [
     wrapGAppsHook
@@ -74,10 +73,28 @@ buildDotnetModule rec {
     libXrandr
     fontconfig
     glew
+
+    # Headless executable
+    libGL
+    SDL2
   ];
 
   patches = [
     ./appdir.patch # Ryujinx attempts to write to the nix store. This patch redirects it to "~/.config/Ryujinx" on Linux.
+  ];
+
+  projectFile = "Ryujinx.sln";
+  testProjectFile = "Ryujinx.Tests/Ryujinx.Tests.csproj";
+  doCheck = true;
+
+  dotnetFlags = [
+    "/p:ExtraDefineConstants=DISABLE_UPDATER"
+  ];
+
+  executables = [
+    "Ryujinx.Headless.SDL2"
+    "Ryujinx.Ava"
+    "Ryujinx"
   ];
 
   makeWrapperArgs = [
@@ -100,8 +117,10 @@ buildDotnetModule rec {
     install -D ./ryujinx-mime.xml $out/share/mime/packages/ryujinx-mime.xml
     install -D ./ryujinx-logo.svg $out/share/icons/hicolor/scalable/apps/ryujinx.svg
 
-    substituteInPlace $out/share/applications/ryujinx.desktop --replace \
-      "Exec=Ryujinx" "Exec=$out/bin/Ryujinx"
+    substituteInPlace $out/share/applications/ryujinx.desktop \
+      --replace "Exec=Ryujinx" "Exec=$out/bin/Ryujinx"
+
+    ln -s $out/bin/Ryujinx $out/bin/ryujinx
 
     popd
   '';

@@ -1,6 +1,6 @@
 { mkDerivation, lib, fetchurl, fetchpatch, pkg-config, cmake, glib, boost, libsigrok
 , libsigrokdecode, libserialport, libzip, udev, libusb1, libftdi1, glibmm
-, pcre, librevisa, python3, qtbase, qtsvg, qttools
+, pcre, python3, qtbase, qtsvg, qttools
 }:
 
 mkDerivation rec {
@@ -16,7 +16,7 @@ mkDerivation rec {
 
   buildInputs = [
     glib boost libsigrok libsigrokdecode libserialport libzip udev libusb1 libftdi1 glibmm
-    pcre librevisa python3
+    pcre python3
     qtbase qtsvg qttools
   ];
 
@@ -27,6 +27,11 @@ mkDerivation rec {
       url = "https://github.com/sigrokproject/pulseview/commit/fb89dd11f2a4a08b73c498869789e38677181a8d.patch";
       sha256 = "07ifsis9jlc0jjp2d11f7hvw9kaxcbk0a57h2m4xsv1d7vzl9yfh";
     })
+    # Fixes replaced/obsolete Qt methods
+    (fetchpatch {
+       url = "https://github.com/sigrokproject/pulseview/commit/ae726b70a7ada9a4be5808e00f0c951318479684.patch";
+       sha256 = "sha256-6bFXFAnTO+MBUmslw55gWWSCCPwnejqKGpHeJOoH0e8=";
+     })
   ];
 
   meta = with lib; {

@@ -17,12 +17,12 @@
 
 buildPythonPackage rec {
   pname = "recordlinkage";
-  version = "0.14";
+  version = "0.15";
 
   disabled = pythonOlder "3.7";
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-kuY2MUuwaLb228kwkJmOnnU+OolZcvGlhKTTiama+T4=";
+    sha256 = "sha256-aIrx54vnf85I/Kit/4njg/VIOu6H0SE7NdQ1GbeP8Cc=";
   };
 
   propagatedBuildInputs = [
@@ -40,7 +40,7 @@ buildPythonPackage rec {
 
   # pytestCheckHook does not work
   # Reusing their CI setup which involves 'rm -rf recordlinkage' in preCheck phase do not work too.
-  checkInputs = [ pytest ];
+  nativeCheckInputs = [ pytest ];
 
   pythonImportsCheck = [ "recordlinkage" ];
 

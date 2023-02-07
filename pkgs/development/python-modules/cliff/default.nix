@@ -3,6 +3,7 @@
 , fetchPypi
 , autopage
 , cmd2
+, importlib-metadata
 , installShellFiles
 , openstackdocstheme
 , pbr
@@ -16,11 +17,11 @@
 
 buildPythonPackage rec {
   pname = "cliff";
-  version = "3.10.1";
+  version = "4.1.0";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-BFruPzxkRxll161QfOhHSk4vIIFfu1QFp3D4WWoqAKA=";
+    sha256 = "sha256-u+6CEnMIRyoxI+0QtSiWFsssQ1B0ZW3QcuVTYwU9CRw=";
   };
 
   postPatch = ''
@@ -38,6 +39,7 @@ buildPythonPackage rec {
   propagatedBuildInputs = [
     autopage
     cmd2
+    importlib-metadata
     pbr
     prettytable
     pyparsing

@@ -28,14 +28,14 @@
 
 buildPythonPackage rec {
   pname = "etils";
-  version = "0.7.1";
+  version = "0.9.0";
   format = "pyproject";
 
   disabled = pythonOlder "3.7";
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-IHwJfdQYDV5asce37ni3v5Rx4SU03qziOx05LevSkvM=";
+    hash = "sha256-SJED6eSZpWZ2XGBFjuFdGFzwBl8gYKTRamj49Gli7Q0=";
   };
 
   nativeBuildInputs = [
@@ -58,13 +58,11 @@ buildPythonPackage rec {
       ++ etree ++ etree-dm ++ etree-jax ++ etree-tf;
   };
 
-  doCheck = false; # disable tests until https://github.com/NixOS/nixpkgs/issues/185273 is resolved
-
   pythonImportsCheck = [
     "etils"
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     chex
     jaxlib
     pytest-subtests
@@ -79,6 +77,8 @@ buildPythonPackage rec {
     "test_public_access" # requires network access
     "test_resource_path" # known to fail on Python 3.10, see https://github.com/google/etils/issues/143
   ];
+
+  doCheck = false; # error: infinite recursion encountered
 
   meta = with lib; {
     description = "Collection of eclectic utils for python";

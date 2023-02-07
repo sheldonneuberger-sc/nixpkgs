@@ -1,7 +1,6 @@
 { lib, fetchFromGitHub
 , version
 , suffix ? ""
-, curl
 , sha256 ? null
 , src ? fetchFromGitHub { owner = "NixOS"; repo = "nix"; rev = version; inherit sha256; }
 , patches ? [ ]
@@ -12,6 +11,7 @@ let
   atLeast25 = lib.versionAtLeast version "2.5pre";
   atLeast27 = lib.versionAtLeast version "2.7pre";
   atLeast210 = lib.versionAtLeast version "2.10pre";
+  atLeast213 = lib.versionAtLeast version "2.13pre";
 in
 { stdenv
 , autoconf-archive
@@ -25,6 +25,7 @@ in
 , bzip2
 , callPackage
 , coreutils
+, curl
 , editline
 , flex
 , gnutar
@@ -37,6 +38,7 @@ in
 , libsodium
 , lowdown
 , mdbook
+, mdbook-linkcheck
 , nlohmann_json
 , openssl
 , perl
@@ -54,6 +56,9 @@ in
 , confDir
 , stateDir
 , storeDir
+
+  # passthru tests
+, pkgsi686Linux
 }: let
 self = stdenv.mkDerivation {
   pname = "nix";
@@ -80,6 +85,8 @@ self = stdenv.mkDerivation {
   ] ++ lib.optionals (atLeast24 && enableDocumentation) [
     (lib.getBin lowdown)
     mdbook
+  ] ++ lib.optionals (atLeast213 && enableDocumentation) [
+    mdbook-linkcheck
   ] ++ lib.optionals stdenv.isLinux [
     util-linuxMinimal
   ];
@@ -110,7 +117,7 @@ self = stdenv.mkDerivation {
 
   propagatedBuildInputs = [
     boehmgc
-  ] ++ lib.optional (atLeast27) [
+  ] ++ lib.optionals (atLeast27) [
     nlohmann_json
   ];
 
@@ -162,6 +169,8 @@ self = stdenv.mkDerivation {
     "--disable-init-state"
   ] ++ lib.optionals stdenv.isLinux [
     "--with-sandbox-shell=${busybox-sandbox-shell}/bin/busybox"
+  ] ++ lib.optionals (atLeast210 && stdenv.isLinux && stdenv.hostPlatform.isStatic) [
+    "--enable-embedded-sandbox-shell"
   ] ++ lib.optionals (stdenv.hostPlatform != stdenv.buildPlatform && stdenv.hostPlatform ? nix && stdenv.hostPlatform.nix ? system) [
     "--with-system=${stdenv.hostPlatform.nix.system}"
   ] ++ lib.optionals (!withLibseccomp) [
@@ -194,6 +203,16 @@ self = stdenv.mkDerivation {
 
   enableParallelBuilding = true;
 
+  passthru = {
+    inherit aws-sdk-cpp boehmgc;
+
+    perl-bindings = perl.pkgs.toPerlModule (callPackage ./nix-perl.nix { nix = self; inherit Security; });
+
+    tests = {
+      nixi686 = pkgsi686Linux.nixVersions.${"nix_${lib.versions.major version}_${lib.versions.minor version}"};
+    };
+  };
+
   meta = with lib; {
     description = "Powerful package manager that makes package management reliable and reproducible";
     longDescription = ''
@@ -208,12 +227,6 @@ self = stdenv.mkDerivation {
     maintainers = with maintainers; [ eelco lovesegfault artturin ];
     platforms = platforms.unix;
     outputsToInstall = [ "out" ] ++ optional enableDocumentation "man";
-  };
-
-  passthru = {
-    inherit aws-sdk-cpp boehmgc;
-
-    perl-bindings = perl.pkgs.toPerlModule (callPackage ./nix-perl.nix { nix = self; inherit Security; });
   };
 };
 in self

@@ -12,21 +12,21 @@
 
 buildPythonPackage rec {
   pname = "tifffile";
-  version = "2022.5.4";
+  version = "2022.10.10";
   format = "setuptools";
 
   disabled = pythonOlder "3.7";
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-sDFHoVhit8HZDUdDUZfxSb73pSwlrWfPH5tGX6pxuNI=";
+    hash = "sha256-ULYbqUO4ZtGRKVvDigAZHJ/asj7OBjVEx/GiZOP2qo4=";
   };
 
   propagatedBuildInputs = [
     numpy
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     dask
     fsspec
     lxml
@@ -40,6 +40,8 @@ buildPythonPackage rec {
     "test_write_ome"
     # Test file is missing
     "test_write_predictor"
+    "test_issue_imagej_hyperstack_arg"
+    "test_issue_description_overwrite"
     # AssertionError
     "test_write_bigtiff"
     "test_write_imagej_raw"

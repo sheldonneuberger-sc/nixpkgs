@@ -1,26 +1,24 @@
 { lib, stdenv, fetchFromGitHub
 , installShellFiles
 , boost, zlib, openssl
-, upnpSupport ? true, miniupnpc ? null
+, upnpSupport ? true, miniupnpc
 , aesniSupport ? stdenv.hostPlatform.aesSupport
 , avxSupport   ? stdenv.hostPlatform.avxSupport
 }:
 
-assert upnpSupport -> miniupnpc != null;
-
 stdenv.mkDerivation rec {
   pname = "i2pd";
-  version = "2.42.1";
+  version = "2.45.1";
 
   src = fetchFromGitHub {
     owner = "PurpleI2P";
     repo = pname;
     rev = version;
-    sha256 = "sha256-q44r+PVGxeoElVfthUh++X8EhxbzqJwjC/r5TD+89WA=";
+    sha256 = "sha256-gyHnLoELjL/IQbtgH2W25xw30l+9akH7jgQfjp4y5sg=";
   };
 
-  buildInputs = with lib; [ boost zlib openssl ]
-    ++ optional upnpSupport miniupnpc;
+  buildInputs = [ boost zlib openssl ]
+    ++ lib.optional upnpSupport miniupnpc;
 
   nativeBuildInputs = [
     installShellFiles

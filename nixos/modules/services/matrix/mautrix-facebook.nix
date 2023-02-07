@@ -17,7 +17,7 @@ let
 in {
   options = {
     services.mautrix-facebook = {
-      enable = mkEnableOption "Mautrix-Facebook, a Matrix-Facebook hybrid puppeting/relaybot bridge";
+      enable = mkEnableOption (lib.mdDoc "Mautrix-Facebook, a Matrix-Facebook hybrid puppeting/relaybot bridge");
 
       settings = mkOption rec {
         apply = recursiveUpdate default;
@@ -25,6 +25,7 @@ in {
         default = {
           homeserver = {
             address = "http://localhost:8008";
+            software = "standard";
           };
 
           appservice = rec {

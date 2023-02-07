@@ -6,28 +6,15 @@ let
   cfg = config.services.gitlab;
   opt = options.services.gitlab;
 
+  toml = pkgs.formats.toml {};
+  yaml = pkgs.formats.yaml {};
+
   ruby = cfg.packages.gitlab.ruby;
 
   postgresqlPackage = if config.services.postgresql.enable then
                         config.services.postgresql.package
                       else
                         pkgs.postgresql_12;
-
-  # Git 2.36.1 seemingly contains a commit-graph related bug which is
-  # easily triggered through GitLab, so we downgrade it to 2.35.x
-  # until this issue is solved. See
-  # https://gitlab.com/gitlab-org/gitlab/-/issues/360783#note_992870101.
-  gitPackage =
-    let
-      version = "2.35.4";
-    in
-      pkgs.git.overrideAttrs (oldAttrs: rec {
-        inherit version;
-        src = pkgs.fetchurl {
-          url = "https://www.kernel.org/pub/software/scm/git/git-${version}.tar.xz";
-          sha256 = "sha256-mv13OdNkXggeKQkJ+47QcJ6lYmcw6Qjri1ZJ2ETCTOk=";
-        };
-      });
 
   gitlabSocket = "${cfg.statePath}/tmp/sockets/gitlab.socket";
   gitalySocket = "${cfg.statePath}/tmp/sockets/gitaly.socket";
@@ -53,11 +40,12 @@ let
 
   gitalyToml = pkgs.writeText "gitaly.toml" ''
     socket_path = "${lib.escape ["\""] gitalySocket}"
+    runtime_dir = "/run/gitaly"
     bin_dir = "${cfg.packages.gitaly}/bin"
     prometheus_listen_addr = "localhost:9236"
 
     [git]
-    bin_path = "${gitPackage}/bin/git"
+    bin_path = "${pkgs.git}/bin/git"
 
     [gitaly-ruby]
     dir = "${cfg.packages.gitaly.ruby}"
@@ -89,16 +77,17 @@ let
     repos_path = "${cfg.statePath}/repositories";
     secret_file = "${cfg.statePath}/gitlab_shell_secret";
     log_file = "${cfg.statePath}/log/gitlab-shell.log";
-    redis = {
-      bin = "${pkgs.redis}/bin/redis-cli";
-      host = "127.0.0.1";
-      port = config.services.redis.servers.gitlab.port;
-      database = 0;
-      namespace = "resque:gitlab";
-    };
   };
 
   redisConfig.production.url = cfg.redisUrl;
+
+  cableYml = yaml.generate "cable.yml" {
+    production = {
+      adapter = "redis";
+      url = cfg.redisUrl;
+      channel_prefix = "gitlab_production";
+    };
+  };
 
   pagesArgs = [
     "-pages-domain" gitlabConfig.production.pages.host
@@ -153,7 +142,7 @@ let
       };
       workhorse.secret_file = "${cfg.statePath}/.gitlab_workhorse_secret";
       gitlab_kas.secret_file = "${cfg.statePath}/.gitlab_kas_secret";
-      git.bin_path = "${gitPackage}/bin/git";
+      git.bin_path = "git";
       monitoring = {
         ip_whitelist = [ "127.0.0.0/8" "::1/128" ];
         sidekiq_exporter = {
@@ -168,7 +157,7 @@ let
         port = cfg.registry.externalPort;
         key = cfg.registry.keyFile;
         api_url = "http://${config.services.dockerRegistry.listenAddress}:${toString config.services.dockerRegistry.port}/";
-        issuer = "gitlab-issuer";
+        issuer = cfg.registry.issuer;
       };
       extra = {};
       uploads.storage_path = cfg.statePath;
@@ -188,16 +177,27 @@ let
     MALLOC_ARENA_MAX = "2";
   } // cfg.extraEnv;
 
+  runtimeDeps = with pkgs; [
+    nodejs
+    gzip
+    git
+    gnutar
+    postgresqlPackage
+    coreutils
+    procps
+    findutils # Needed for gitlab:cleanup:orphan_job_artifact_files
+  ];
+
   gitlab-rake = pkgs.stdenv.mkDerivation {
     name = "gitlab-rake";
-    buildInputs = [ pkgs.makeWrapper ];
+    nativeBuildInputs = [ pkgs.makeWrapper ];
     dontBuild = true;
     dontUnpack = true;
     installPhase = ''
       mkdir -p $out/bin
       makeWrapper ${cfg.packages.gitlab.rubyEnv}/bin/rake $out/bin/gitlab-rake \
           ${concatStrings (mapAttrsToList (name: value: "--set ${name} '${value}' ") gitlabEnv)} \
-          --set PATH '${lib.makeBinPath [ pkgs.nodejs pkgs.gzip pkgs.git pkgs.gnutar postgresqlPackage pkgs.coreutils pkgs.procps ]}:$PATH' \
+          --set PATH '${lib.makeBinPath runtimeDeps}:$PATH' \
           --set RAKEOPT '-f ${cfg.packages.gitlab}/share/gitlab/Rakefile' \
           --chdir '${cfg.packages.gitlab}/share/gitlab'
      '';
@@ -205,14 +205,14 @@ let
 
   gitlab-rails = pkgs.stdenv.mkDerivation {
     name = "gitlab-rails";
-    buildInputs = [ pkgs.makeWrapper ];
+    nativeBuildInputs = [ pkgs.makeWrapper ];
     dontBuild = true;
     dontUnpack = true;
     installPhase = ''
       mkdir -p $out/bin
       makeWrapper ${cfg.packages.gitlab.rubyEnv}/bin/rails $out/bin/gitlab-rails \
           ${concatStrings (mapAttrsToList (name: value: "--set ${name} '${value}' ") gitlabEnv)} \
-          --set PATH '${lib.makeBinPath [ pkgs.nodejs pkgs.gzip pkgs.git pkgs.gnutar postgresqlPackage pkgs.coreutils pkgs.procps ]}:$PATH' \
+          --set PATH '${lib.makeBinPath runtimeDeps}:$PATH' \
           --chdir '${cfg.packages.gitlab}/share/gitlab'
      '';
   };
@@ -245,6 +245,7 @@ in {
     (mkRenamedOptionModule [ "services" "gitlab" "stateDir" ] [ "services" "gitlab" "statePath" ])
     (mkRenamedOptionModule [ "services" "gitlab" "backupPath" ] [ "services" "gitlab" "backup" "path" ])
     (mkRemovedOptionModule [ "services" "gitlab" "satelliteDir" ] "")
+    (mkRemovedOptionModule [ "services" "gitlab" "logrotate" "extraConfig" ] "Modify services.logrotate.settings.gitlab directly instead")
   ];
 
   options = {
@@ -468,9 +469,9 @@ in {
 
       redisUrl = mkOption {
         type = types.str;
-        default = "redis://localhost:${toString config.services.redis.servers.gitlab.port}/";
-        defaultText = literalExpression ''redis://localhost:''${toString config.services.redis.servers.gitlab.port}/'';
-        description = lib.mdDoc "Redis URL for all GitLab services except gitlab-shell";
+        default = "unix:/run/gitlab/redis.sock";
+        example = "redis://localhost:6379/";
+        description = lib.mdDoc "Redis URL for all GitLab services.";
       };
 
       extraGitlabRb = mkOption {
@@ -560,7 +561,7 @@ in {
           description = lib.mdDoc "GitLab container registry host name.";
         };
         port = mkOption {
-          type = types.int;
+          type = types.port;
           default = 4567;
           description = lib.mdDoc "GitLab container registry port.";
         };
@@ -613,7 +614,7 @@ in {
         };
 
         port = mkOption {
-          type = types.int;
+          type = types.port;
           default = 25;
           description = lib.mdDoc "Port of the SMTP server for GitLab.";
         };
@@ -748,17 +749,15 @@ in {
         type = types.int;
         default = 2;
         apply = x: builtins.toString x;
-        description = ''
+        description = lib.mdDoc ''
           The number of worker processes Puma should spawn. This
           controls the amount of parallel Ruby code can be
-          executed. GitLab recommends <literal>Number of CPU cores - 1</literal>, but at least two.
+          executed. GitLab recommends `Number of CPU cores - 1`, but at least two.
 
-          <note>
-            <para>
-              Each worker consumes quite a bit of memory, so
-              be careful when increasing this.
-            </para>
-          </note>
+          ::: {.note}
+          Each worker consumes quite a bit of memory, so
+          be careful when increasing this.
+          :::
         '';
       };
 
@@ -766,16 +765,14 @@ in {
         type = types.int;
         default = 0;
         apply = x: builtins.toString x;
-        description = ''
+        description = lib.mdDoc ''
           The minimum number of threads Puma should use per
           worker.
 
-          <note>
-            <para>
-              Each thread consumes memory and contributes to Global VM
-              Lock contention, so be careful when increasing this.
-            </para>
-          </note>
+          ::: {.note}
+          Each thread consumes memory and contributes to Global VM
+          Lock contention, so be careful when increasing this.
+          :::
         '';
       };
 
@@ -783,19 +780,17 @@ in {
         type = types.int;
         default = 4;
         apply = x: builtins.toString x;
-        description = ''
+        description = lib.mdDoc ''
           The maximum number of threads Puma should use per
           worker. This limits how many threads Puma will automatically
           spawn in response to requests. In contrast to workers,
           threads will never be able to run Ruby code in parallel, but
           give higher IO parallelism.
 
-          <note>
-            <para>
-              Each thread consumes memory and contributes to Global VM
-              Lock contention, so be careful when increasing this.
-            </para>
-          </note>
+          ::: {.note}
+          Each thread consumes memory and contributes to Global VM
+          Lock contention, so be careful when increasing this.
+          :::
         '';
       };
 
@@ -862,19 +857,43 @@ in {
           default = 30;
           description = lib.mdDoc "How many rotations to keep.";
         };
+      };
 
-        extraConfig = mkOption {
-          type = types.lines;
-          default = "";
-          description = lib.mdDoc ''
-            Extra logrotate config options for this path. Refer to
-            <https://linux.die.net/man/8/logrotate> for details.
-          '';
-        };
+      workhorse.config = mkOption {
+        type = toml.type;
+        default = {};
+        example = literalExpression ''
+          {
+            object_storage.provider = "AWS";
+            object_storage.s3 = {
+              aws_access_key_id = "AKIAXXXXXXXXXXXXXXXX";
+              aws_secret_access_key = { _secret = "/var/keys/aws_secret_access_key"; };
+            };
+          };
+        '';
+        description = lib.mdDoc ''
+          Configuration options to add to Workhorse's configuration
+          file.
+
+          See
+          <https://gitlab.com/gitlab-org/gitlab/-/blob/master/workhorse/config.toml.example>
+          and
+          <https://docs.gitlab.com/ee/development/workhorse/configuration.html>
+          for examples and option documentation.
+
+          Options containing secret data should be set to an attribute
+          set containing the attribute `_secret` - a string pointing
+          to a file containing the value the option should be set
+          to. See the example to get a better picture of this: in the
+          resulting configuration file, the
+          `object_storage.s3.aws_secret_access_key` key will be set to
+          the contents of the {file}`/var/keys/aws_secret_access_key`
+          file.
+        '';
       };
 
       extraConfig = mkOption {
-        type = types.attrs;
+        type = yaml.type;
         default = {};
         example = literalExpression ''
           {
@@ -978,8 +997,9 @@ in {
     # Redis is required for the sidekiq queue runner.
     services.redis.servers.gitlab = {
       enable = mkDefault true;
-      port = mkDefault 31636;
-      bind = mkDefault "127.0.0.1";
+      user = mkDefault cfg.user;
+      unixSocket = mkDefault "/run/gitlab/redis.sock";
+      unixSocketPerm = mkDefault 770;
     };
 
     # We use postgres as the main data store.
@@ -999,7 +1019,6 @@ in {
           rotate = cfg.logrotate.keep;
           copytruncate = true;
           compress = true;
-          extraConfig = cfg.logrotate.extraConfig;
         };
       };
     };
@@ -1068,6 +1087,7 @@ in {
     # Ensure Docker Registry launches after the certificate generation job
     systemd.services.docker-registry = optionalAttrs cfg.registry.enable {
       wants = [ "gitlab-registry-cert.service" ];
+      after = [ "gitlab-registry-cert.service" ];
     };
 
     # Enable Docker Registry, if GitLab-Container Registry is enabled
@@ -1121,6 +1141,7 @@ in {
       "d ${gitlabConfig.production.shared.path}/lfs-objects 0750 ${cfg.user} ${cfg.group} -"
       "d ${gitlabConfig.production.shared.path}/packages 0750 ${cfg.user} ${cfg.group} -"
       "d ${gitlabConfig.production.shared.path}/pages 0750 ${cfg.user} ${cfg.group} -"
+      "d ${gitlabConfig.production.shared.path}/registry 0750 ${cfg.user} ${cfg.group} -"
       "d ${gitlabConfig.production.shared.path}/terraform_state 0750 ${cfg.user} ${cfg.group} -"
       "L+ /run/gitlab/config - - - - ${cfg.statePath}/config"
       "L+ /run/gitlab/log - - - - ${cfg.statePath}/log"
@@ -1174,6 +1195,7 @@ in {
           cp -rf --no-preserve=mode ${cfg.packages.gitlab}/share/gitlab/config.dist/* ${cfg.statePath}/config
           cp -rf --no-preserve=mode ${cfg.packages.gitlab}/share/gitlab/db/* ${cfg.statePath}/db
           ln -sf ${extraGitlabRb} ${cfg.statePath}/config/initializers/extra-gitlab.rb
+          ln -sf ${cableYml} ${cfg.statePath}/config/cable.yml
 
           ${cfg.packages.gitlab-shell}/bin/install
 
@@ -1288,7 +1310,7 @@ in {
       });
       path = with pkgs; [
         postgresqlPackage
-        gitPackage
+        git
         ruby
         openssh
         nodejs
@@ -1319,7 +1341,7 @@ in {
       path = with pkgs; [
         openssh
         procps  # See https://gitlab.com/gitlab-org/gitaly/issues/1562
-        gitPackage
+        git
         cfg.packages.gitaly.rubyEnv
         cfg.packages.gitaly.rubyEnv.wrappedRuby
         gzip
@@ -1332,6 +1354,7 @@ in {
         TimeoutSec = "infinity";
         Restart = "on-failure";
         WorkingDirectory = gitlabEnv.HOME;
+        RuntimeDirectory = "gitaly";
         ExecStart = "${cfg.packages.gitaly}/bin/gitaly ${gitalyToml}";
       };
     };
@@ -1363,8 +1386,9 @@ in {
       wantedBy = [ "gitlab.target" ];
       partOf = [ "gitlab.target" ];
       path = with pkgs; [
+        remarshal
         exiftool
-        gitPackage
+        git
         gnutar
         gzip
         openssh
@@ -1377,6 +1401,17 @@ in {
         TimeoutSec = "infinity";
         Restart = "on-failure";
         WorkingDirectory = gitlabEnv.HOME;
+        ExecStartPre = pkgs.writeShellScript "gitlab-workhorse-pre-start" ''
+          set -o errexit -o pipefail -o nounset
+          shopt -s dotglob nullglob inherit_errexit
+
+          ${utils.genJqSecretsReplacementSnippet
+              cfg.workhorse.config
+              "${cfg.statePath}/config/gitlab-workhorse.json"}
+
+          json2toml "${cfg.statePath}/config/gitlab-workhorse.json" "${cfg.statePath}/config/gitlab-workhorse.toml"
+          rm "${cfg.statePath}/config/gitlab-workhorse.json"
+        '';
         ExecStart =
           "${cfg.packages.gitlab-workhorse}/bin/workhorse "
           + "-listenUmask 0 "
@@ -1384,6 +1419,7 @@ in {
           + "-listenAddr /run/gitlab/gitlab-workhorse.socket "
           + "-authSocket ${gitlabSocket} "
           + "-documentRoot ${cfg.packages.gitlab}/share/gitlab/public "
+          + "-config ${cfg.statePath}/config/gitlab-workhorse.toml "
           + "-secretPath ${cfg.statePath}/.gitlab_workhorse_secret";
       };
     };
@@ -1425,7 +1461,7 @@ in {
       environment = gitlabEnv;
       path = with pkgs; [
         postgresqlPackage
-        gitPackage
+        git
         openssh
         nodejs
         procps
@@ -1468,6 +1504,6 @@ in {
 
   };
 
-  meta.doc = ./gitlab.xml;
+  meta.doc = ./gitlab.md;
 
 }

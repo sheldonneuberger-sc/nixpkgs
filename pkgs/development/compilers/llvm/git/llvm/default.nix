@@ -57,7 +57,7 @@ in stdenv.mkDerivation (rec {
 
   propagatedBuildInputs = [ ncurses zlib ];
 
-  checkInputs = [ which ];
+  nativeCheckInputs = [ which ];
 
   patches = [
     ./gnu-install-dirs.patch
@@ -97,6 +97,13 @@ in stdenv.mkDerivation (rec {
     rm test/ExecutionEngine/frem.ll
   '' + ''
     patchShebangs test/BugPoint/compile-custom.ll.py
+  '';
+
+  preConfigure = ''
+    # Workaround for configure flags that need to have spaces
+    cmakeFlagsArray+=(
+      -DLLVM_LIT_ARGS='-svj''${NIX_BUILD_CORES} --no-progress-bar'
+    )
   '';
 
   # hacky fix: created binaries need to be run before installation

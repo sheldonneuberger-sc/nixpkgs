@@ -9,13 +9,13 @@
 
 stdenv.mkDerivation rec {
   pname = "outline";
-  version = "0.65.2";
+  version = "0.67.2";
 
   src = fetchFromGitHub {
     owner = "outline";
     repo = "outline";
     rev = "v${version}";
-    sha256 = "sha256-a9K6nMgg1j93BPiy03M86dDecXv/J47vUaqHH3S6DOs=";
+    sha256 = "sha256-O5t//UwF+AVFxeBQHRIZM5RSf4+DgUE5LHWVRKxJLfc=";
   };
 
   nativeBuildInputs = [ makeWrapper yarn2nix-moretea.fixup_yarn_lock ];
@@ -34,6 +34,7 @@ stdenv.mkDerivation rec {
 
   buildPhase = ''
     runHook preBuild
+    export NODE_OPTIONS=--openssl-legacy-provider
 
     yarn config --offline set yarn-offline-mirror $yarnOfflineCache
     fixup_yarn_lock yarn.lock
@@ -56,6 +57,11 @@ stdenv.mkDerivation rec {
 
     mkdir -p $out/bin $out/share/outline
     mv node_modules build $out/share/outline/
+    # On NixOS the WorkingDirectory is set to the build directory, as
+    # this contains files needed in the onboarding process. This folder
+    # must also contain the `public` folder for mail notifications to
+    # work, as it contains the mail templates.
+    mv public $out/share/outline/build
 
     node_modules=$out/share/outline/node_modules
     build=$out/share/outline/build

@@ -6,12 +6,15 @@
 , extraSources ? []
 , baseOptionsJSON ? null
 , warningsAreErrors ? true
+, allowDocBook ? true
 , prefix ? ../../..
 }:
 
 with pkgs;
 
 let
+  inherit (lib) hasPrefix removePrefix;
+
   lib = pkgs.lib;
 
   docbook_xsl_ns = pkgs.docbook-xsl-ns.override {
@@ -28,27 +31,59 @@ let
   stripAnyPrefixes = lib.flip (lib.foldr lib.removePrefix) prefixesToStrip;
 
   optionsDoc = buildPackages.nixosOptionsDoc {
-    inherit options revision baseOptionsJSON warningsAreErrors;
+    inherit options revision baseOptionsJSON warningsAreErrors allowDocBook;
     transformOptions = opt: opt // {
       # Clean up declaration sites to not refer to the NixOS source tree.
       declarations = map stripAnyPrefixes opt.declarations;
     };
   };
 
+  nixos-lib = import ../../lib { };
+
+  testOptionsDoc = let
+      eval = nixos-lib.evalTest {
+        # Avoid evaluating a NixOS config prototype.
+        config.node.type = lib.types.deferredModule;
+        options._module.args = lib.mkOption { internal = true; };
+      };
+    in buildPackages.nixosOptionsDoc {
+      inherit (eval) options;
+      inherit (revision);
+      transformOptions = opt: opt // {
+        # Clean up declaration sites to not refer to the NixOS source tree.
+        declarations =
+          map
+            (decl:
+              if hasPrefix (toString ../../..) (toString decl)
+              then
+                let subpath = removePrefix "/" (removePrefix (toString ../../..) (toString decl));
+                in { url = "https://github.com/NixOS/nixpkgs/blob/master/${subpath}"; name = subpath; }
+              else decl)
+            opt.declarations;
+      };
+      documentType = "none";
+      variablelistId = "test-options-list";
+      optionIdPrefix = "test-opt-";
+    };
+
   sources = lib.sourceFilesBySuffices ./. [".xml"];
 
-  modulesDoc = builtins.toFile "modules.xml" ''
-    <section xmlns:xi="http://www.w3.org/2001/XInclude" id="modules">
-    ${(lib.concatMapStrings (path: ''
-      <xi:include href="${path}" />
-    '') (lib.catAttrs "value" config.meta.doc))}
-    </section>
+  modulesDoc = runCommand "modules.xml" {
+    nativeBuildInputs = [ pkgs.nixos-render-docs ];
+  } ''
+    nixos-render-docs manual docbook \
+      --manpage-urls ${pkgs.path + "/doc/manpage-urls.json"} \
+      "$out" \
+      --section \
+        --section-id modules \
+        --chapters ${lib.concatMapStrings (p: "${p.value} ") config.meta.doc}
   '';
 
   generatedSources = runCommand "generated-docbook" {} ''
     mkdir $out
     ln -s ${modulesDoc} $out/modules.xml
     ln -s ${optionsDoc.optionsDocBook} $out/options-db.xml
+    ln -s ${testOptionsDoc.optionsDocBook} $out/test-options-db.xml
     printf "%s" "${version}" > $out/version
   '';
 
@@ -70,11 +105,14 @@ let
     '';
 
   manualXsltprocOptions = toString [
-    "--param section.autolabel 1"
-    "--param section.label.includes.component.label 1"
+    "--param chapter.autolabel 0"
+    "--param part.autolabel 0"
+    "--param preface.autolabel 0"
+    "--param reference.autolabel 0"
+    "--param section.autolabel 0"
     "--stringparam html.stylesheet 'style.css overrides.css highlightjs/mono-blue.css'"
     "--stringparam html.script './highlightjs/highlight.pack.js ./highlightjs/loader.js'"
-    "--param xref.with.number.and.title 1"
+    "--param xref.with.number.and.title 0"
     "--param toc.section.depth 0"
     "--param generate.consistent.ids 1"
     "--stringparam admon.style ''"
@@ -141,40 +179,10 @@ let
       lintrng $out/man-pages-combined.xml
     '';
 
-  olinkDB = runCommand "manual-olinkdb"
-    { inherit sources;
-      nativeBuildInputs = [ buildPackages.libxml2.bin buildPackages.libxslt.bin ];
-    }
-    ''
-      xsltproc \
-        ${manualXsltprocOptions} \
-        --stringparam collect.xref.targets only \
-        --stringparam targets.filename "$out/manual.db" \
-        --nonet \
-        ${docbook_xsl_ns}/xml/xsl/docbook/xhtml/chunktoc.xsl \
-        ${manual-combined}/manual-combined.xml
-
-      cat > "$out/olinkdb.xml" <<EOF
-      <?xml version="1.0" encoding="utf-8"?>
-      <!DOCTYPE targetset SYSTEM
-        "file://${docbook_xsl_ns}/xml/xsl/docbook/common/targetdatabase.dtd" [
-        <!ENTITY manualtargets SYSTEM "file://$out/manual.db">
-      ]>
-      <targetset>
-        <targetsetinfo>
-            Allows for cross-referencing olinks between the manpages
-            and manual.
-        </targetsetinfo>
-
-        <document targetdoc="manual">&manualtargets;</document>
-      </targetset>
-      EOF
-    '';
-
 in rec {
   inherit generatedSources;
 
-  inherit (optionsDoc) optionsJSON optionsNix optionsDocBook;
+  inherit (optionsDoc) optionsJSON optionsNix optionsDocBook optionsUsedDocbook;
 
   # Generate the NixOS manual.
   manualHTML = runCommand "nixos-manual-html"
@@ -189,7 +197,6 @@ in rec {
       mkdir -p $dst
       xsltproc \
         ${manualXsltprocOptions} \
-        --stringparam target.database.document "${olinkDB}/olinkdb.xml" \
         --stringparam id.warnings "1" \
         --nonet --output $dst/ \
         ${docbook_xsl_ns}/xml/xsl/docbook/xhtml/chunktoc.xsl \
@@ -226,7 +233,6 @@ in rec {
 
       xsltproc \
         ${manualXsltprocOptions} \
-        --stringparam target.database.document "${olinkDB}/olinkdb.xml" \
         --nonet --xinclude --output $dst/epub/ \
         ${docbook_xsl_ns}/xml/xsl/docbook/epub/docbook.xsl \
         ${manual-combined}/manual-combined.xml
@@ -248,19 +254,23 @@ in rec {
   # Generate the NixOS manpages.
   manpages = runCommand "nixos-manpages"
     { inherit sources;
-      nativeBuildInputs = [ buildPackages.libxml2.bin buildPackages.libxslt.bin ];
+      nativeBuildInputs = [
+        buildPackages.libxml2.bin
+        buildPackages.libxslt.bin
+        buildPackages.installShellFiles
+      ];
       allowedReferences = ["out"];
     }
     ''
       # Generate manpages.
-      mkdir -p $out/share/man
+      mkdir -p $out/share/man/man8
+      installManPage ${./manpages}/*
       xsltproc --nonet \
         --maxdepth 6000 \
         --param man.output.in.separate.dir 1 \
         --param man.output.base.dir "'$out/share/man/'" \
         --param man.endnotes.are.numbered 0 \
         --param man.break.after.slash 1 \
-        --stringparam target.database.document "${olinkDB}/olinkdb.xml" \
         ${docbook_xsl_ns}/xml/xsl/docbook/manpages/docbook.xsl \
         ${manual-combined}/man-pages-combined.xml
     '';

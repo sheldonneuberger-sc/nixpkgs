@@ -9,18 +9,15 @@
 , fixup_yarn_lock
 , nodejs
 , jitsi-meet
-, conf ? { }
 }:
 
 let
   pinData = lib.importJSON ./pin.json;
   noPhoningHome = {
     disable_guests = true; # disable automatic guest account registration at matrix.org
-    piwik = false; # disable analytics
   };
-  configOverrides = writeText "element-config-overrides.json" (builtins.toJSON (noPhoningHome // conf));
-
-in stdenv.mkDerivation rec {
+in
+stdenv.mkDerivation rec {
   pname = "element-web";
   inherit (pinData) version;
 
@@ -42,6 +39,11 @@ in stdenv.mkDerivation rec {
     runHook preConfigure
 
     export HOME=$PWD/tmp
+    # with the update of openssl3, some key ciphers are not supported anymore
+    # this flag will allow those codecs again as a workaround
+    # see https://medium.com/the-node-js-collection/node-js-17-is-here-8dba1e14e382#5f07
+    # and https://github.com/vector-im/element-web/issues/21043
+    export NODE_OPTIONS=--openssl-legacy-provider
     mkdir -p $HOME
 
     fixup_yarn_lock yarn.lock
@@ -69,7 +71,7 @@ in stdenv.mkDerivation rec {
     cp -R webapp $out
     cp ${jitsi-meet}/libs/external_api.min.js $out/jitsi_external_api.min.js
     echo "${version}" > "$out/version"
-    jq -s '.[0] * .[1]' "config.sample.json" "${configOverrides}" > "$out/config.json"
+    jq -s '.[0] * $conf' "config.sample.json" --argjson "conf" '${builtins.toJSON noPhoningHome}' > "$out/config.json"
 
     runHook postInstall
   '';

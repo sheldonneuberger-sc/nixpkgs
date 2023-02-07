@@ -21,14 +21,14 @@
 
 buildPythonPackage rec {
   pname = "distributed";
-  version = "2022.7.0";
+  version = "2023.1.0";
   format = "setuptools";
 
   disabled = pythonOlder "3.7";
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-5oq6i+PiDl0RIKvKyEGQn/GAIXCKhBKvpY/xU8T6sKw=";
+    hash = "sha256-xV3HQmmDtSIn+DM3Rcoyp3dqY9qSjB+8Con6+o6a/y0=";
   };
 
   postPatch = ''

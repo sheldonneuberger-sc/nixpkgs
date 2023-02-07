@@ -2,7 +2,7 @@
 , lib
 , buildPackages
 , fetchFromGitLab
-, removeReferencesTo
+, fetchpatch
 , python3
 , meson
 , ninja
@@ -19,20 +19,18 @@
 , libjack2
 , libusb1
 , udev
-, libva
 , libsndfile
 , vulkan-headers
 , vulkan-loader
 , webrtc-audio-processing
 , ncurses
-, readline81 # meson can't find <7 as those versions don't have a .pc file
+, readline # meson can't find <7 as those versions don't have a .pc file
 , lilv
 , makeFontsConf
 , callPackage
 , nixosTests
 , withValgrind ? lib.meta.availableOn stdenv.hostPlatform valgrind
 , valgrind
-, withMediaSession ? true
 , libcameraSupport ? true
 , libcamera
 , libdrm
@@ -45,7 +43,9 @@
 , sbc
 , libfreeaptx
 , ldacbt
+, liblc3
 , fdk_aac
+, libopus
 , nativeHspSupport ? true
 , nativeHfpSupport ? true
 , ofonoSupport ? true
@@ -65,11 +65,10 @@
 
 let
   mesonEnableFeature = b: if b then "enabled" else "disabled";
-  mesonList = l: "[" + lib.concatStringsSep "," l + "]";
 
   self = stdenv.mkDerivation rec {
     pname = "pipewire";
-    version = "0.3.56";
+    version = "0.3.65";
 
     outputs = [
       "out"
@@ -87,7 +86,7 @@ let
       owner = "pipewire";
       repo = "pipewire";
       rev = version;
-      sha256 = "sha256-wbHHr7BW8Gdj9D1IjzOuD6VuXApJ5E0Zde2iKWImzxg=";
+      sha256 = "sha256-O5nu58QFlOPTaN4qNi50Wp9acxM6dWNy63BD+AnVl5w=";
     };
 
     patches = [
@@ -103,6 +102,13 @@ let
       ./0090-pipewire-config-template-paths.patch
       # Place SPA data files in lib output to avoid dependency cycles
       ./0095-spa-data-dir.patch
+
+      # backport a fix to actually install the new module
+      # FIXME: remove after 0.3.66
+      (fetchpatch {
+        url = "https://gitlab.freedesktop.org/pipewire/pipewire/-/commit/fba7083f8ceb210c7c20aceafeb5c9a8767cf705.patch";
+        hash = "sha256-aZQ4OzK0B5YPq+jQNygxPE0coG2qB0ukbYzyI8E24XM=";
+      })
     ];
 
     nativeBuildInputs = [
@@ -124,7 +130,7 @@ let
       libsndfile
       lilv
       ncurses
-      readline81
+      readline
       udev
       vulkan-headers
       vulkan-loader
@@ -133,7 +139,7 @@ let
     ++ lib.optionals gstreamerSupport [ gst_all_1.gst-plugins-base gst_all_1.gstreamer ]
     ++ lib.optionals libcameraSupport [ libcamera libdrm ]
     ++ lib.optional ffmpegSupport ffmpeg
-    ++ lib.optionals bluezSupport [ bluez libfreeaptx ldacbt sbc fdk_aac ]
+    ++ lib.optionals bluezSupport [ bluez libfreeaptx ldacbt liblc3 sbc fdk_aac libopus ]
     ++ lib.optional pulseTunnelSupport libpulseaudio
     ++ lib.optional zeroconfSupport avahi
     ++ lib.optional raopSupport openssl
@@ -141,7 +147,7 @@ let
     ++ lib.optionals x11Support [ libcanberra xorg.libX11 xorg.libXfixes ];
 
     # Valgrind binary is required for running one optional test.
-    checkInputs = lib.optional withValgrind valgrind;
+    nativeCheckInputs = lib.optional withValgrind valgrind;
 
     mesonFlags = [
       "-Ddocs=enabled"
@@ -166,6 +172,7 @@ let
       "-Dbluez5-backend-ofono=${mesonEnableFeature ofonoSupport}"
       "-Dbluez5-backend-hsphfpd=${mesonEnableFeature hsphfpdSupport}"
       "-Dbluez5-codec-lc3plus=disabled"
+      "-Dbluez5-codec-lc3=${mesonEnableFeature bluezSupport}"
       "-Dsysconfdir=/etc"
       "-Dpipewire_confdata_dir=${placeholder "lib"}/share/pipewire"
       "-Draop=${mesonEnableFeature raopSupport}"
@@ -238,7 +245,7 @@ let
       homepage = "https://pipewire.org/";
       license = licenses.mit;
       platforms = platforms.linux;
-      maintainers = with maintainers; [ jtojnar kranzes ];
+      maintainers = with maintainers; [ jtojnar kranzes k900 ];
     };
   };
 

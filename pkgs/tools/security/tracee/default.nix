@@ -6,67 +6,57 @@
 , pkg-config
 
 , zlib
-, libelf
+, elfutils
+, libbpf
+
+, nixosTests
+, testers
+, tracee
 }:
 
 let
   inherit (llvmPackages_13) clang;
-  clang-with-bpf =
-    (clang.overrideAttrs (o: { pname = o.pname + "-with-bpf"; })).override (o: {
-      extraBuildCommands = o.extraBuildCommands + ''
-        # make a separate wrapped clang we can target at bpf
-        cp $out/bin/clang $out/bin/clang-bpf
-        # extra flags to append after the cc-cflags
-        echo '-target bpf -fno-stack-protector' > $out/nix-support/cc-cflags-bpf
-        # use sed to attach the cc-cflags-bpf after cc-cflags
-        sed -i -E "s@^(extraAfter=\(\\$\NIX_CFLAGS_COMPILE_.*)(\))\$@\1 $(cat $out/nix-support/cc-cflags-bpf)\2@" $out/bin/clang-bpf
-      '';
-    });
 in
 buildGoModule rec {
   pname = "tracee";
-  version = "0.7.0";
+  version = "0.11.0";
 
   src = fetchFromGitHub {
     owner = "aquasecurity";
     repo = pname;
     rev = "v${version}";
-    sha256 = "sha256-Y++FWxADnj1W5S3VrAlJAnotFYb6biCPJ6dpQ0Nin8o=";
-    # Once libbpf hits 1.0 we will migrate to the nixpkgs libbpf rather than the
-    # pinned copy in submodules
-    fetchSubmodules = true;
+    sha256 = "sha256-fAbii/DEXx9WJpolc7amqF9TQj4oE5x0TCiNOtVasGo=";
   };
-  vendorSha256 = "sha256-C2RExp67qax8+zJIgyMJ18sBtn/xEYj4tAvGCCpBssQ=";
+  vendorSha256 = "sha256-eenhIsiJhPLgwJo2spIGURPkcsec3kO4L5UJ0FWniQc=";
 
   patches = [
-    # bpf-core can't be compiled with wrapped clang since it forces the target
-    # we need to be able to replace it with another wrapped clang that has
-    # it's target as bpf
-    ./bpf-core-clang-bpf.patch
-    # add -s to ldflags for smaller binaries
-    ./disable-go-symbol-table.patch
+    ./use-our-libbpf.patch
   ];
 
-
   enableParallelBuilding = true;
+  # needed to build bpf libs
+  hardeningDisable = [ "stackprotector" ];
 
-  strictDeps = true;
-  nativeBuildInputs = [ pkg-config clang-with-bpf ];
-  buildInputs = [ zlib libelf ];
+  nativeBuildInputs = [ pkg-config clang ];
+  buildInputs = [ elfutils libbpf zlib ];
 
   makeFlags = [
     "VERSION=v${version}"
-    "CMD_CLANG_BPF=clang-bpf"
+    "GO_DEBUG_FLAG=-s -w"
     # don't actually need git but the Makefile checks for it
     "CMD_GIT=echo"
   ];
 
   buildPhase = ''
     runHook preBuild
-    make $makeFlags ''${enableParallelBuilding:+-j$NIX_BUILD_CORES -l$NIX_BUILD_CORES}
+    mkdir -p ./dist
+    make $makeFlags ''${enableParallelBuilding:+-j$NIX_BUILD_CORES} bpf-core all
     runHook postBuild
   '';
 
+  # tests require a separate go module
+  # integration tests are ran within a nixos vm
+  # see passthru.tests.integration
   doCheck = false;
 
   installPhase = ''
@@ -74,11 +64,10 @@ buildGoModule rec {
 
     mkdir -p $out/{bin,share/tracee}
 
-    cp ./dist/tracee-ebpf $out/bin
-    cp ./dist/tracee-rules $out/bin
+    mv ./dist/tracee-{ebpf,rules} $out/bin/
 
-    cp -r ./dist/rules $out/share/tracee/
-    cp -r ./cmd/tracee-rules/templates $out/share/tracee/
+    mv ./dist/rules $out/share/tracee/
+    mv ./cmd/tracee-rules/templates $out/share/tracee/
 
     runHook postInstall
   '';
@@ -95,6 +84,15 @@ buildGoModule rec {
     runHook postInstallCheck
   '';
 
+  passthru.tests = {
+    integration = nixosTests.tracee;
+    version = testers.testVersion {
+      package = tracee;
+      version = "v${version}";
+      command = "tracee-ebpf --version";
+    };
+  };
+
   meta = with lib; {
     homepage = "https://aquasecurity.github.io/tracee/latest/";
     changelog = "https://github.com/aquasecurity/tracee/releases/tag/v${version}";
@@ -106,7 +104,12 @@ buildGoModule rec {
       is delivered as a Docker image that monitors the OS and detects suspicious
       behavior based on a pre-defined set of behavioral patterns.
     '';
-    license = licenses.asl20;
+    license = with licenses; [
+      # general license
+      asl20
+      # pkg/ebpf/c/*
+      gpl2Plus
+    ];
     maintainers = with maintainers; [ jk ];
     platforms = [ "x86_64-linux" ];
   };

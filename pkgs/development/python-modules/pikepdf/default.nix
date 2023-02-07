@@ -24,7 +24,7 @@
 
 buildPythonPackage rec {
   pname = "pikepdf";
-  version = "5.4.2";
+  version = "6.2.9";
   format = "setuptools";
 
   disabled = pythonOlder "3.7";
@@ -39,7 +39,7 @@ buildPythonPackage rec {
     postFetch = ''
       rm "$out/.git_archival.txt"
     '';
-    hash = "sha256-b4QUn+wfkk6Yx74ViBg6yaE1+bXtxidoyXYgBaJ9iiM=";
+    hash = "sha256-Obsg5fsTv/7uiFRbzGp90+d90e2dX7CWMMRMgiQvNyc=";
   };
 
   patches = [
@@ -51,10 +51,8 @@ buildPythonPackage rec {
   ];
 
   postPatch = ''
-    sed -i 's|\S*/opt/homebrew.*|pass|' setup.py
-
     substituteInPlace setup.py \
-      --replace setuptools_scm_git_archive ""
+      --replace "shims_enabled = not cflags_defined" "shims_enabled = False"
   '';
 
   SETUPTOOLS_SCM_PRETEND_VERSION = version;
@@ -68,7 +66,7 @@ buildPythonPackage rec {
     setuptools-scm
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     attrs
     hypothesis
     pytest-xdist

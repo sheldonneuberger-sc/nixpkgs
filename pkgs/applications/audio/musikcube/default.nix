@@ -1,24 +1,25 @@
-{ cmake
+{ lib
+, stdenv
+, cmake
 , pkg-config
-, boost
 , curl
+, asio
 , fetchFromGitHub
 , fetchpatch
 , ffmpeg
 , gnutls
 , lame
 , libev
+, game-music-emu
 , libmicrohttpd
 , libopenmpt
 , mpg123
 , ncurses
-, lib
-, stdenv
 , taglib
 # Linux Dependencies
 , alsa-lib
 , pulseaudio
-, systemdSupport ? stdenv.isLinux
+, systemdSupport ? lib.meta.availableOn stdenv.hostPlatform systemd
 , systemd
 # Darwin Dependencies
 , Cocoa
@@ -27,25 +28,16 @@
 
 stdenv.mkDerivation rec {
   pname = "musikcube";
-  version = "0.98.0";
+  version = "0.99.5";
 
   src = fetchFromGitHub {
     owner = "clangen";
     repo = pname;
     rev = version;
-    sha256 = "sha256-bnwOxEcvRXWPuqtkv8YlpclvH/6ZtQvyvHy4mqJCwik=";
+    sha256 = "sha256-SbWL36GRIJPSvxZyj6sebJxTkSPsUcsKyC3TmcIq2O0";
   };
 
-  patches = []
-    ++ lib.optionals stdenv.isDarwin [
-      # Fix pending upstream inclusion for Darwin nixpkgs builds:
-      # https://github.com/clangen/musikcube/pull/531
-      (fetchpatch {
-        name = "darwin-build.patch";
-        url = "https://github.com/clangen/musikcube/commit/9077bb9fa6ddfe93ebb14bb8feebc8a0ef9b7ee4.patch";
-        sha256 = "sha256-Am9AGKDGMN5z+JJFJKdsBLrHf2neHFovgF/8I5EXLDA=";
-      })
-    ];
+  outputs = [ "out" "dev" ];
 
   nativeBuildInputs = [
     cmake
@@ -53,12 +45,13 @@ stdenv.mkDerivation rec {
   ];
 
   buildInputs = [
-    boost
+    asio
     curl
     ffmpeg
     gnutls
     lame
     libev
+    game-music-emu
     libmicrohttpd
     libopenmpt
     mpg123
@@ -84,7 +77,7 @@ stdenv.mkDerivation rec {
   meta = with lib; {
     description = "A fully functional terminal-based music player, library, and streaming audio server";
     homepage = "https://musikcube.com/";
-    maintainers = [ maintainers.aanderse ];
+    maintainers = with maintainers; [ aanderse srapenne ];
     license = licenses.bsd3;
     platforms = platforms.all;
   };

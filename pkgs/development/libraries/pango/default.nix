@@ -22,13 +22,13 @@
 
 stdenv.mkDerivation rec {
   pname = "pango";
-  version = "1.50.8";
+  version = "1.50.12";
 
   outputs = [ "bin" "out" "dev" "devdoc" ];
 
   src = fetchurl {
     url = "mirror://gnome/sources/${pname}/${lib.versions.majorMinor version}/${pname}-${version}.tar.xz";
-    sha256 = "z2JvWd0UbAIxdMQDSSDpZn8dJawsFWlRbWMTbDESVfo=";
+    sha256 = "yu+W0nu+eSpr6ScnxzRo2DKxPaV8gHHvebnfae4Fj+M=";
   };
 
   depsBuildBuild = [
@@ -47,7 +47,6 @@ stdenv.mkDerivation rec {
   buildInputs = [
     fribidi
     libthai
-    gobject-introspection
   ] ++ lib.optionals stdenv.isDarwin (with darwin.apple_sdk.frameworks; [
     ApplicationServices
     Carbon
@@ -97,6 +96,8 @@ stdenv.mkDerivation rec {
     updateScript = gnome.updateScript {
       packageName = pname;
       versionPolicy = "odd-unstable";
+      # 1.90 is alpha for API 2.
+      freeze = true;
     };
   };
 

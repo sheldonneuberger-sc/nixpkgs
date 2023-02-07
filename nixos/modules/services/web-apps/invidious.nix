@@ -146,12 +146,12 @@ let
 in
 {
   options.services.invidious = {
-    enable = lib.mkEnableOption "Invidious";
+    enable = lib.mkEnableOption (lib.mdDoc "Invidious");
 
     package = lib.mkOption {
       type = types.package;
       default = pkgs.invidious;
-      defaultText = "pkgs.invidious";
+      defaultText = lib.literalExpression "pkgs.invidious";
       description = lib.mdDoc "The Invidious package to use.";
     };
 
@@ -171,7 +171,7 @@ in
       description = lib.mdDoc ''
         A file including Invidious settings.
 
-        It gets merged with the setttings specified in {option}`services.invidious.settings`
+        It gets merged with the settings specified in {option}`services.invidious.settings`
         and can be used to store secrets like `hmac_key` outside of the nix store.
       '';
     };

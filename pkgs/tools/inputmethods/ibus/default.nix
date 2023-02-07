@@ -1,7 +1,5 @@
 { lib, stdenv
 , substituteAll
-, fetchurl
-, fetchpatch
 , fetchFromGitHub
 , autoreconfHook
 , gettext
@@ -36,8 +34,6 @@
 , nixosTests
 }:
 
-with lib;
-
 let
   python3Runtime = python3.withPackages (ps: with ps; [ pygobject3 ]);
   python3BuildEnv = python3.buildEnv.override {
@@ -54,28 +50,22 @@ let
     nativeBuildInputs = [ makeWrapper ];
   } ''
       makeWrapper ${dbus}/bin/dbus-launch $out/bin/dbus-launch \
-        --add-flags --config-file=${dbus.daemon}/share/dbus-1/session.conf
+        --add-flags --config-file=${dbus}/share/dbus-1/session.conf
   '';
 in
 
 stdenv.mkDerivation rec {
   pname = "ibus";
-  version = "1.5.26";
+  version = "1.5.27";
 
   src = fetchFromGitHub {
     owner = "ibus";
     repo = "ibus";
     rev = version;
-    sha256 = "7Vuj4Gyd+dLUoCkR4SPkfGPwVQPRo2pHk0pRAsmtjxc=";
+    sha256 = "sha256-DwX7SYRb18C0Lz2ySPS3yV99Q1xQezs0Ls2P7Rbtk5Q=";
   };
 
   patches = [
-    # Fixes systemd unit installation path https://github.com/ibus/ibus/pull/2388
-    (fetchpatch {
-      url = "https://github.com/ibus/ibus/commit/33b4b3932bfea476a841f8df99e20049b83f4b0e.patch";
-      sha256 = "kh8SBR+cqsov/B0A2YXLJVq1F171qoSRUKbBPHjPRHI=";
-    })
-
     (substituteAll {
       src = ./fix-paths.patch;
       pythonInterpreter = python3Runtime.interpreter;
@@ -96,10 +86,10 @@ stdenv.mkDerivation rec {
 
   configureFlags = [
     "--disable-memconf"
-    (enableFeature (dconf != null) "dconf")
-    (enableFeature (libnotify != null) "libnotify")
-    (enableFeature withWayland "wayland")
-    (enableFeature enableUI "ui")
+    (lib.enableFeature (dconf != null) "dconf")
+    (lib.enableFeature (libnotify != null) "libnotify")
+    (lib.enableFeature withWayland "wayland")
+    (lib.enableFeature enableUI "ui")
     "--enable-gtk4"
     "--enable-install-tests"
     "--with-unicode-emoji-dir=${unicode-emoji}/share/unicode/emoji"
@@ -141,7 +131,7 @@ stdenv.mkDerivation rec {
     isocodes
     json-glib
     libnotify
-  ] ++ optionals withWayland [
+  ] ++ lib.optionals withWayland [
     libxkbcommon
     wayland
   ];
@@ -173,7 +163,7 @@ stdenv.mkDerivation rec {
     };
   };
 
-  meta = {
+  meta = with lib; {
     homepage = "https://github.com/ibus/ibus";
     description = "Intelligent Input Bus, input method framework";
     license = licenses.lgpl21Plus;

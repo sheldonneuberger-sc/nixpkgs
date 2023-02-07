@@ -1,6 +1,7 @@
 { buildPythonPackage
 , fetchFromGitHub
 , jaxlib
+, jax
 , keras
 , lib
 , matplotlib
@@ -10,33 +11,37 @@
 , pytest-xdist
 , pytestCheckHook
 , tensorflow
+, fetchpatch
+, rich
 }:
 
 buildPythonPackage rec {
   pname = "flax";
-  version = "0.5.2";
+  version = "0.6.3";
 
   src = fetchFromGitHub {
     owner = "google";
     repo = pname;
     rev = "refs/tags/v${version}";
-    sha256 = "sha256-t24JZ08EmvuAINZC26OQI1icklUhUkfz6ZRKPr2COAw=";
+    sha256 = "sha256-4BYfrwEddA2LCMyDO6PBBYdMVTqqDxhzMCZ5JIIml3g=";
   };
 
   buildInputs = [ jaxlib ];
 
   propagatedBuildInputs = [
+    jax
     matplotlib
     msgpack
     numpy
     optax
+    rich
   ];
 
   pythonImportsCheck = [
     "flax"
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     keras
     pytest-xdist
     pytestCheckHook
@@ -61,10 +66,29 @@ buildPythonPackage rec {
     "examples/*"
   ];
 
+  disabledTests = [
+    # See https://github.com/google/flax/issues/2554.
+    "test_async_save_checkpoints"
+    "test_jax_array0"
+    "test_jax_array1"
+    "test_keep0"
+    "test_keep1"
+    "test_optimized_lstm_cell_matches_regular"
+    "test_overwrite_checkpoints"
+    "test_save_restore_checkpoints_target_empty"
+    "test_save_restore_checkpoints_target_none"
+    "test_save_restore_checkpoints_target_singular"
+    "test_save_restore_checkpoints_w_float_steps"
+    "test_save_restore_checkpoints"
+  ];
+
   meta = with lib; {
     description = "Neural network library for JAX";
     homepage = "https://github.com/google/flax";
     license = licenses.asl20;
     maintainers = with maintainers; [ ndl ];
+    # Py3.10 requires orbax, tensorstore which needs packaging
+    # Py3.11 requires tensorboard, which is unsupported at py3.11 atm
+    broken = true; # At 2023-02-05
   };
 }

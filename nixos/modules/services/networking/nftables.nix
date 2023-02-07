@@ -11,24 +11,21 @@ in
       type = types.bool;
       default = false;
       description =
-        ''
-          Whether to enable nftables.  nftables is a Linux-based packet
-          filtering framework intended to replace frameworks like iptables.
-
-          This conflicts with the standard networking firewall, so make sure to
-          disable it before using nftables.
+        lib.mdDoc ''
+          Whether to enable nftables and use nftables based firewall if enabled.
+          nftables is a Linux-based packet filtering framework intended to
+          replace frameworks like iptables.
 
           Note that if you have Docker enabled you will not be able to use
           nftables without intervention. Docker uses iptables internally to
           setup NAT for containers. This module disables the ip_tables kernel
-          module, however Docker automatically loads the module. Please see [1]
+          module, however Docker automatically loads the module. Please see
+          <https://github.com/NixOS/nixpkgs/issues/24318#issuecomment-289216273>
           for more information.
 
           There are other programs that use iptables internally too, such as
-          libvirt. For information on how the two firewalls interact, see [2].
-
-          [1]: https://github.com/NixOS/nixpkgs/issues/24318#issuecomment-289216273
-          [2]: https://wiki.nftables.org/wiki-nftables/index.php/Troubleshooting#Question_4._How_do_nftables_and_iptables_interact_when_used_on_the_same_system.3F
+          libvirt. For information on how the two firewalls interact, see
+          <https://wiki.nftables.org/wiki-nftables/index.php/Troubleshooting#Question_4._How_do_nftables_and_iptables_interact_when_used_on_the_same_system.3F>.
         '';
     };
     networking.nftables.ruleset = mkOption {
@@ -38,7 +35,7 @@ in
         # Check out https://wiki.nftables.org/ for better documentation.
         # Table for both IPv4 and IPv6.
         table inet filter {
-          # Block all incomming connections traffic except SSH and "ping".
+          # Block all incoming connections traffic except SSH and "ping".
           chain input {
             type filter hook input priority 0;
 
@@ -80,19 +77,17 @@ in
         lib.mdDoc ''
           The ruleset to be used with nftables.  Should be in a format that
           can be loaded using "/bin/nft -f".  The ruleset is updated atomically.
+          This option conflicts with rulesetFile.
         '';
     };
     networking.nftables.rulesetFile = mkOption {
-      type = types.path;
-      default = pkgs.writeTextFile {
-        name = "nftables-rules";
-        text = cfg.ruleset;
-      };
-      defaultText = literalMD ''a file with the contents of {option}`networking.nftables.ruleset`'';
+      type = types.nullOr types.path;
+      default = null;
       description =
         lib.mdDoc ''
           The ruleset file to be used with nftables.  Should be in a format that
           can be loaded using "nft -f".  The ruleset is updated atomically.
+          This option conflicts with ruleset and nftables based firewall.
         '';
     };
   };
@@ -100,10 +95,6 @@ in
   ###### implementation
 
   config = mkIf cfg.enable {
-    assertions = [{
-      assertion = config.networking.firewall.enable == false;
-      message = "You can not use nftables and iptables at the same time. networking.firewall.enable must be set to false.";
-    }];
     boot.blacklistedKernelModules = [ "ip_tables" ];
     environment.systemPackages = [ pkgs.nftables ];
     networking.networkmanager.firewallBackend = mkDefault "nftables";
@@ -117,7 +108,9 @@ in
         rulesScript = pkgs.writeScript "nftables-rules" ''
           #! ${pkgs.nftables}/bin/nft -f
           flush ruleset
-          include "${cfg.rulesetFile}"
+          ${if cfg.rulesetFile != null then ''
+            include "${cfg.rulesetFile}"
+          '' else cfg.ruleset}
         '';
       in {
         Type = "oneshot";

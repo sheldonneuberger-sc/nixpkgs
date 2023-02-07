@@ -10,7 +10,9 @@
 , pytestCheckHook
 , pytest-mock
 , aiohttp
+, fastapi
 , gevent
+, httpx
 , redis
 , requests
 , sure
@@ -19,12 +21,12 @@
 
 buildPythonPackage rec {
   pname = "mocket";
-  version = "3.10.6";
+  version = "3.10.9";
   disabled = !isPy3k;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-pD6WiK3OgDD2Xy9r59KOB9TT/LNiQa/DWRXA+w76oe8=";
+    sha256 = "sha256-fAVw5WvpJOITQWqA8Y6Xi7QbaunZ1WGXxAuUMXbh+Aw=";
   };
 
   propagatedBuildInputs = [
@@ -34,11 +36,13 @@ buildPythonPackage rec {
     urllib3
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
     pytest-mock
     aiohttp
+    fastapi
     gevent
+    httpx
     redis
     requests
     sure
@@ -67,6 +71,7 @@ buildPythonPackage rec {
     "test_truesendall_after_mocket_session"
     "test_real_request_session"
     "test_asyncio_record_replay"
+    "test_gethostbyname"
   ];
 
   pythonImportsCheck = [ "mocket" ];

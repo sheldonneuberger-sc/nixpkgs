@@ -6,6 +6,7 @@
 , poetry-core
 , pytestCheckHook
 , pythonOlder
+, setuptools
 , tomli
 , typing-extensions
 }:
@@ -26,6 +27,7 @@ buildPythonPackage rec {
 
   nativeBuildInputs = [
     poetry-core
+    setuptools
   ];
 
   propagatedBuildInputs = [
@@ -37,7 +39,7 @@ buildPythonPackage rec {
     typing-extensions
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
   ];
 

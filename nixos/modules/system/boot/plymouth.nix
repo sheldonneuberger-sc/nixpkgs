@@ -62,7 +62,7 @@ in
 
     boot.plymouth = {
 
-      enable = mkEnableOption "Plymouth boot splash screen";
+      enable = mkEnableOption (lib.mdDoc "Plymouth boot splash screen");
 
       font = mkOption {
         default = "${pkgs.dejavu_fonts.minimal}/share/fonts/truetype/DejaVuSans.ttf";
@@ -145,6 +145,9 @@ in
     systemd.services.plymouth-read-write.wantedBy = [ "sysinit.target" ];
     systemd.services.systemd-ask-password-plymouth.wantedBy = [ "multi-user.target" ];
     systemd.paths.systemd-ask-password-plymouth.wantedBy = [ "multi-user.target" ];
+
+    # Prevent Plymouth taking over the screen during system updates.
+    systemd.services.plymouth-start.restartIfChanged = false;
 
     boot.initrd.systemd = {
       extraBin.plymouth = "${plymouth}/bin/plymouth"; # for the recovery shell

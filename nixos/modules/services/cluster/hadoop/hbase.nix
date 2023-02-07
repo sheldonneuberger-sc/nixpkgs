@@ -9,7 +9,7 @@ in
 {
   options.services.hadoop = {
 
-    gatewayRole.enableHbaseCli = mkEnableOption "HBase CLI tools";
+    gatewayRole.enableHbaseCli = mkEnableOption (lib.mdDoc "HBase CLI tools");
 
     hbaseSiteDefault = mkOption {
       default = {
@@ -39,7 +39,7 @@ in
       default = {};
       type = with types; attrsOf anything;
       internal = true;
-      description = ''
+      description = lib.mdDoc ''
         Internal option to add configs to hbase-site.xml based on module options
       '';
     };
@@ -77,8 +77,8 @@ in
         default = null;
       };
       master = {
-        enable = mkEnableOption "HBase Master";
-        initHDFS = mkEnableOption "initialization of the hbase directory on HDFS";
+        enable = mkEnableOption (lib.mdDoc "HBase Master");
+        initHDFS = mkEnableOption (lib.mdDoc "initialization of the hbase directory on HDFS");
 
         openFirewall = mkOption {
           type = types.bool;
@@ -89,7 +89,7 @@ in
         };
       };
       regionServer = {
-        enable = mkEnableOption "HBase RegionServer";
+        enable = mkEnableOption (lib.mdDoc "HBase RegionServer");
 
         overrideHosts = mkOption {
           type = types.bool;
@@ -141,9 +141,9 @@ in
 
       services.hadoop.hbaseSiteInternal."hbase.rootdir" = cfg.hbase.rootdir;
 
-      networking.firewall.allowedTCPPorts = (mkIf cfg.hbase.master.openFirewall [
+      networking.firewall.allowedTCPPorts = mkIf cfg.hbase.master.openFirewall [
         16000 16010
-      ]);
+      ];
 
     })
 
@@ -168,9 +168,9 @@ in
       services.hadoop.hbaseSiteInternal."hbase.rootdir" = cfg.hbase.rootdir;
 
       networking = {
-        firewall.allowedTCPPorts = (mkIf cfg.hbase.regionServer.openFirewall [
+        firewall.allowedTCPPorts = mkIf cfg.hbase.regionServer.openFirewall [
           16020 16030
-        ]);
+        ];
         hosts = mkIf cfg.hbase.regionServer.overrideHosts {
           "127.0.0.2" = mkForce [ ];
           "::1" = mkForce [ ];

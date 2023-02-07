@@ -11,11 +11,11 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "grails";
-  version = "5.2.2";
+  version = "5.2.5";
 
   src = fetchurl {
     url = "https://github.com/grails/grails-core/releases/download/v${version}/grails-${version}.zip";
-    sha256 = "sha256-ghWWoAySJsiYmpdoFZIQrHSV7kOQe0kDQrONwgqFMzY=";
+    sha256 = "sha256-RI1O10kObIaEjOuUFuAchjIgjrNDKmwRY0+Vep6UT54=";
   };
 
   nativeBuildInputs = [ unzip ];

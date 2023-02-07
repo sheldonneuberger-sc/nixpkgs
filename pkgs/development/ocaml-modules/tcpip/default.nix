@@ -13,22 +13,22 @@
 
 buildDunePackage rec {
   pname = "tcpip";
-  version = "7.1.0";
+  version = "7.1.2";
 
-  useDune2 = true;
+  duneVersion = "3";
 
   src = fetchurl {
     url = "https://github.com/mirage/mirage-${pname}/releases/download/v${version}/${pname}-${version}.tbz";
-    sha256 = "sha256-4nd2OVZa4w22I4bgglnS8lrNfjTk40PL5n6Oh6n+osw=";
+    sha256 = "sha256-lraur6NfFD9yddG+y21jlHKt82gLgYBBbedltlgcRm0=";
   };
 
   nativeBuildInputs = [
-    bisect_ppx
-    ppx_cstruct
     pkg-config
   ];
 
   propagatedBuildInputs = [
+    bisect_ppx
+    ppx_cstruct
     rresult
     cstruct
     cstruct-lwt

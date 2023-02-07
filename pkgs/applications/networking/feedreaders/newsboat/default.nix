@@ -3,16 +3,16 @@
 
 rustPlatform.buildRustPackage rec {
   pname = "newsboat";
-  version = "2.28";
+  version = "2.30.1";
 
   src = fetchFromGitHub {
     owner = "newsboat";
     repo = "newsboat";
     rev = "r${version}";
-    hash = "sha256-MHbGCGtFPXG+82Qveoiv7f8qqZOxThEYb9y9Kv3pnFc=";
+    hash = "sha256-hiZN3wWknshP8MG4ThhbMLyhQkuFozzoETs3mYaMVro=";
   };
 
-  cargoHash = "sha256-9YcVKZn51fhkE6bZmaNu7PXsSG8j0M4piBnTWtX8Kcg=";
+  cargoHash = "sha256-Ap8i8hLqrUi6aSn4wKAdG3Z/5or+bF+epDaWUdWYt78";
 
   # TODO: Check if that's still needed
   postPatch = lib.optionalString stdenv.isDarwin ''
@@ -31,7 +31,7 @@ rustPlatform.buildRustPackage rec {
     ++ lib.optionals stdenv.isDarwin [ Security Foundation libiconv gettext ];
 
   postBuild = ''
-    make prefix="$out"
+    make -j $NIX_BUILD_CORES prefix="$out"
   '';
 
   # https://github.com/NixOS/nixpkgs/pull/98471#issuecomment-703100014 . We set
@@ -44,12 +44,11 @@ rustPlatform.buildRustPackage rec {
   doCheck = true;
 
   preCheck = ''
-    make test
+    make -j $NIX_BUILD_CORES test
   '';
 
   postInstall = ''
-    make prefix="$out" install
-    cp -r contrib $out
+    make -j $NIX_BUILD_CORES prefix="$out" install
   '' + lib.optionalString stdenv.isDarwin ''
     for prog in $out/bin/*; do
       wrapProgram "$prog" --prefix DYLD_LIBRARY_PATH : "${stfl}/lib"

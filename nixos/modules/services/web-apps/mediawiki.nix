@@ -35,7 +35,7 @@ let
   };
 
   mediawikiScripts = pkgs.runCommand "mediawiki-scripts" {
-    buildInputs = [ pkgs.makeWrapper ];
+    nativeBuildInputs = [ pkgs.makeWrapper ];
     preferLocalBuild = true;
   } ''
     mkdir -p $out/bin
@@ -129,7 +129,7 @@ let
 
       ## Set $wgCacheDirectory to a writable directory on the web server
       ## to make your wiki go slightly faster. The directory should not
-      ## be publically accessible from the web.
+      ## be publicly accessible from the web.
       $wgCacheDirectory = "${cacheDir}";
 
       # Site language code, should be one of the list in ./languages/data/Names.php
@@ -171,7 +171,7 @@ in
   options = {
     services.mediawiki = {
 
-      enable = mkEnableOption "MediaWiki";
+      enable = mkEnableOption (lib.mdDoc "MediaWiki");
 
       package = mkOption {
         type = types.package;
@@ -449,6 +449,7 @@ in
           --dbuser ${cfg.database.user} \
           ${optionalString (cfg.database.passwordFile != null) "--dbpassfile ${cfg.database.passwordFile}"} \
           --passfile ${cfg.passwordFile} \
+          --dbtype ${cfg.database.type} \
           ${cfg.name} \
           admin
 

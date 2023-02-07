@@ -2,23 +2,30 @@
 , buildPythonPackage
 , fetchPypi
 , isPyPy
-, unittestCheckHook
+, objgraph
+, psutil
+, pytestCheckHook
 }:
 
 
 buildPythonPackage rec {
   pname = "greenlet";
-  version = "1.1.2";
+  version = "2.0.1";
+  format = "setuptools";
   disabled = isPyPy; # builtin for pypy
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "e30f5ea4ae2346e62cedde8794a56858a67b878dd79f7df76a0767e356b1744a";
+    hash = "sha256-QuYCVkRg2g6O5ny21yNjY+5eExqhWUO2Zw5E5cLtD2c=";
   };
 
-  checkInputs = [ unittestCheckHook ];
+  nativeCheckInputs = [
+    objgraph
+    psutil
+    pytestCheckHook
+  ];
 
-  unittestFlagsArray = [ "-v" "greenlet.tests" ];
+  doCheck = false; # installed tests need to be executed, not sure how to accomplish that
 
   meta = with lib; {
     homepage = "https://github.com/python-greenlet/greenlet";

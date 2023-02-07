@@ -1,27 +1,34 @@
-{ fetchFromGitHub, lib, pkg-config, rustPlatform, stdenv, openssl, Security }:
+{ lib
+, rustPlatform
+, fetchFromGitHub
+, stdenv
+, pkg-config
+, openssl
+, darwin
+}:
 
 rustPlatform.buildRustPackage rec {
   pname = "oha";
-  version = "0.5.4";
+  version = "0.5.6";
 
   src = fetchFromGitHub {
     owner = "hatoo";
     repo = pname;
     rev = "refs/tags/v${version}";
-    sha256 = "sha256-dk9OXUt31UIZLH3E50R8iE8zJqvdT1pBu1oU25QrOro=";
+    sha256 = "sha256-0Z8+dpZs0KMknyuw4Brkr8UosTDk75Kvy6zA/d91xgE=";
   };
 
-  cargoSha256 = "sha256-WlAAuFz7DZ4PhlTgEXNK9sZKkS95pCrbX2AXC3c1rh8=";
+  cargoSha256 = "sha256-isrfxnZbkIqQJ+jipYXvl1QgQ6hwRMdGA1kKFM1saDQ=";
 
-  nativeBuildInputs = lib.optional stdenv.isLinux pkg-config;
+  nativeBuildInputs = lib.optionals stdenv.isLinux [
+    pkg-config
+  ];
 
-  buildInputs = lib.optional stdenv.isLinux openssl
-    ++ lib.optional stdenv.isDarwin Security;
-
-  # remove cargo config so it can find the linker
-  postPatch = ''
-    rm .cargo/config.toml
-  '';
+  buildInputs = lib.optionals stdenv.isLinux [
+    openssl
+  ] ++ lib.optionals stdenv.isDarwin [
+    darwin.apple_sdk.frameworks.Security
+  ];
 
   # tests don't work inside the sandbox
   doCheck = false;

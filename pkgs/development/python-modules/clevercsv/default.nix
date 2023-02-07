@@ -3,38 +3,41 @@
 , fetchFromGitHub
 , cchardet
 , chardet
-, cleo
-, clikit
 , pandas
 , regex
 , tabview
 , python
-, unittestCheckHook
+, pytestCheckHook
 }:
 
 buildPythonPackage rec {
   pname = "clevercsv";
-  version = "0.7.1";
+  version = "0.7.5";
   format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "alan-turing-institute";
     repo = "CleverCSV";
-    rev = "v${version}";
-    sha256 = "sha256-ynS3G2ZcEqVlC2d6n5ZQ1Em5lh/dWESj9jEO8C4WzZQ=";
+    rev = "refs/tags/v${version}";
+    hash = "sha256-zpnUw0ThYbbYS7CYgsi0ZL1qxbY4B1cy2NhrUU9uzig=";
   };
+
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace "packaging>=23.0" "packaging"
+  '';
 
   propagatedBuildInputs = [
     cchardet
     chardet
-    cleo
-    clikit
     pandas
     regex
     tabview
   ];
 
-  checkInputs = [ unittestCheckHook ];
+  nativeCheckInputs = [
+    pytestCheckHook
+  ];
 
   pythonImportsCheck = [
     "clevercsv"
@@ -48,7 +51,14 @@ buildPythonPackage rec {
   '';
 
   # their ci only runs unit tests, there are also integration and fuzzing tests
-  unittestFlagsArray = [ "-v" "-f" "-s" "./tests/test_unit" ];
+  pytestFlagsArray = [
+    "./tests/test_unit"
+  ];
+
+  disabledTestPaths = [
+    # ModuleNotFoundError: No module named 'wilderness'
+    "tests/test_unit/test_console.py"
+  ];
 
   meta = with lib; {
     description = "CleverCSV is a Python package for handling messy CSV files";

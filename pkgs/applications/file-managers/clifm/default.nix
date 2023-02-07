@@ -2,13 +2,13 @@
 
 stdenv.mkDerivation rec {
   pname = "clifm";
-  version = "1.6";
+  version = "1.9";
 
   src = fetchFromGitHub {
     owner = "leo-arch";
     repo = pname;
     rev = "v${version}";
-    sha256 = "sha256-ak2tZTNNKsHGNpxobi8oqnimhsNvoaW75zMYBeskXZU=";
+    sha256 = "sha256-jrP8V1EhHldliZEjiX55TJujc82ub46aWi1boJYDVTg=";
   };
 
   buildInputs = [ libcap acl file readline ];

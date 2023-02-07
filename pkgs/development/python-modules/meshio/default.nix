@@ -7,6 +7,7 @@
 , exdown
 , pytestCheckHook
 , rich
+, setuptools
 }:
 
 buildPythonPackage rec {
@@ -19,6 +20,10 @@ buildPythonPackage rec {
     sha256 = "sha256-4kBpLX/yecErE8bl17QDYpqGrStE6SMJWLPwDB7DafA=";
   };
 
+  nativeBuildInputs = [
+    setuptools
+  ];
+
   propagatedBuildInputs = [
     numpy
     netcdf4
@@ -26,7 +31,7 @@ buildPythonPackage rec {
     rich
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     exdown
     pytestCheckHook
   ];

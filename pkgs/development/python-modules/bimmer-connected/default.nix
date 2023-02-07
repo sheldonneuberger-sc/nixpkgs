@@ -1,4 +1,5 @@
 { lib
+, aiofile
 , buildPythonPackage
 , pythonOlder
 , fetchFromGitHub
@@ -13,7 +14,7 @@
 
 buildPythonPackage rec {
   pname = "bimmer-connected";
-  version = "0.10.2";
+  version = "0.12.1";
   format = "setuptools";
 
   disabled = pythonOlder "3.6";
@@ -22,7 +23,7 @@ buildPythonPackage rec {
     owner = "bimmerconnected";
     repo = "bimmer_connected";
     rev = "refs/tags/${version}";
-    hash = "sha256-DcjkS0tbNZkmU787c+ECW3UntEHeKzOThvbFS4ketzA=";
+    hash = "sha256-wLQ2UkedLSwfbUqmb85QgsDYh0zcbgQOMnhbRHW5Bnw=";
   };
 
   nativeBuildInputs = [
@@ -32,15 +33,20 @@ buildPythonPackage rec {
   PBR_VERSION = version;
 
   propagatedBuildInputs = [
+    aiofile
     httpx
     pycryptodome
     pyjwt
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
     respx
     time-machine
+  ];
+
+  pythonImportsCheck = [
+    "bimmer_connected"
   ];
 
   meta = with lib; {

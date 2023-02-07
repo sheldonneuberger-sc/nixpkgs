@@ -2,6 +2,7 @@
 , file, curl, pkg-config, python3, openssl, cmake, zlib
 , installShellFiles, makeWrapper, cacert, rustPlatform, rustc
 , CoreFoundation, Security
+, auditable ? false # TODO: change to true when this is the default
 }:
 
 rustPlatform.buildRustPackage {
@@ -12,7 +13,12 @@ rustPlatform.buildRustPackage {
   cargoVendorDir = "vendor";
   buildAndTestSubdir = "src/tools/cargo";
 
-  passthru.rustc = rustc;
+  inherit auditable;
+
+  passthru = {
+    rustc = rustc;
+    inherit (rustc) tests;
+  };
 
   # changes hash of vendor directory otherwise
   dontUpdateAutotoolsGnuConfigScripts = true;
@@ -20,6 +26,7 @@ rustPlatform.buildRustPackage {
   nativeBuildInputs = [
     pkg-config cmake installShellFiles makeWrapper
     (lib.getDev pkgsHostHost.curl)
+    zlib
   ];
   buildInputs = [ cacert file curl python3 openssl zlib ]
     ++ lib.optionals stdenv.isDarwin [ CoreFoundation Security ];
@@ -69,10 +76,8 @@ rustPlatform.buildRustPackage {
   meta = with lib; {
     homepage = "https://crates.io";
     description = "Downloads your Rust project's dependencies and builds your project";
-    maintainers = with maintainers; [ retrry ];
+    maintainers = with maintainers; [ retrry ] ++ teams.rust.members;
     license = [ licenses.mit licenses.asl20 ];
     platforms = platforms.unix;
-    # weird segfault in a build script
-    broken = stdenv.targetPlatform.isMusl && !stdenv.targetPlatform.isStatic;
   };
 }

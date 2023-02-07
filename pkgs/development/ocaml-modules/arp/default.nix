@@ -15,8 +15,8 @@ buildDunePackage rec {
     sha256 = "1x3l8v96ywc3wrcwbf0j04b8agap4fif0fz6ki2ndzx57yqcjszn";
   };
 
-  minimumOCamlVersion = "4.06";
-  useDune2 = true;
+  minimalOCamlVersion = "4.08";
+  duneVersion = "3";
 
   nativeBuildInputs = [
     bisect_ppx
@@ -25,6 +25,7 @@ buildDunePackage rec {
   propagatedBuildInputs = [
     cstruct
     duration
+    ethernet
     ipaddr
     logs
     lwt
@@ -37,7 +38,6 @@ buildDunePackage rec {
   doCheck = true;
   checkInputs = [
     alcotest
-    ethernet
     mirage-clock-unix
     mirage-profile
     mirage-random

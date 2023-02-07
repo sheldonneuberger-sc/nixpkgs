@@ -18,7 +18,7 @@
 , libpngSupport ? true, libpng
 , liblqr1Support ? true, liblqr1
 , librawSupport ? true, libraw
-, librsvgSupport ? !stdenv.hostPlatform.isMinGW, librsvg
+, librsvgSupport ? !stdenv.hostPlatform.isMinGW, librsvg, pango
 , libtiffSupport ? true, libtiff
 , libxml2Support ? true, libxml2
 , openjpegSupport ? !stdenv.hostPlatform.isMinGW, openjpeg
@@ -30,6 +30,7 @@
 , Foundation
 , testers
 , imagemagick
+, python3
 }:
 
 assert libXtSupport -> libX11Support;
@@ -46,13 +47,13 @@ in
 
 stdenv.mkDerivation rec {
   pname = "imagemagick";
-  version = "7.1.0-46";
+  version = "7.1.0-60";
 
   src = fetchFromGitHub {
     owner = "ImageMagick";
     repo = "ImageMagick";
     rev = version;
-    hash = "sha256-yts86tQMPgdF9Zk1vljVza21mlx1g3XcoHjvtsMoZhA=";
+    hash = "sha256-dQfmW9rt66eWOaKbZ9j8jc1k8v+F8B9TpTx12L+0VE4=";
   };
 
   outputs = [ "out" "dev" "doc" ]; # bin/ isn't really big
@@ -64,6 +65,7 @@ stdenv.mkDerivation rec {
     "--with-frozenpaths"
     (lib.withFeatureAs (arch != null) "gcc-arch" arch)
     (lib.withFeature librsvgSupport "rsvg")
+    (lib.withFeature librsvgSupport "pango")
     (lib.withFeature liblqr1Support "lqr")
     (lib.withFeature libjxlSupport "jxl")
     (lib.withFeatureAs ghostscriptSupport "gs-font-dir" "${ghostscript}/share/ghostscript/fonts")
@@ -88,7 +90,10 @@ stdenv.mkDerivation rec {
     ++ lib.optional djvulibreSupport djvulibre
     ++ lib.optional libjxlSupport libjxl
     ++ lib.optional openexrSupport openexr
-    ++ lib.optional librsvgSupport librsvg
+    ++ lib.optionals librsvgSupport [
+      librsvg
+      pango
+    ]
     ++ lib.optional openjpegSupport openjpeg
     ++ lib.optionals stdenv.isDarwin [
       ApplicationServices
@@ -118,8 +123,10 @@ stdenv.mkDerivation rec {
     done
   '';
 
-  passthru.tests.version =
-    testers.testVersion { package = imagemagick; };
+  passthru.tests = {
+    version = testers.testVersion { package = imagemagick; };
+    inherit (python3.pkgs) img2pdf;
+  };
 
   meta = with lib; {
     homepage = "http://www.imagemagick.org/";

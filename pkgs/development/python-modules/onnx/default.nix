@@ -11,23 +11,28 @@
 , six
 , tabulate
 , typing-extensions
+, pythonRelaxDepsHook
+, pytest-runner
 }:
 
 buildPythonPackage rec {
   pname = "onnx";
-  version = "1.12.0";
+  version = "1.13.0";
   format = "setuptools";
 
   disabled = isPy27;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-E7PnfSdSO52/TzDfyclZRVhZ1eNOkhxE9xLWm4Np7/k=";
+    sha256 = "sha256-QQs5lQNnhX+XtlCTaB/iSVouI9Y3d6is6vlsVqFtFm4=";
   };
 
   nativeBuildInputs = [
     cmake
+    pythonRelaxDepsHook
   ];
+
+  pythonRelaxDeps = [ "protobuf" ];
 
   propagatedBuildInputs = [
     protobuf
@@ -36,19 +41,22 @@ buildPythonPackage rec {
     typing-extensions
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     nbval
     pytestCheckHook
+    pytest-runner
     tabulate
   ];
 
   postPatch = ''
     chmod +x tools/protoc-gen-mypy.sh.in
-    patchShebangs tools/protoc-gen-mypy.py
-    substituteInPlace tools/protoc-gen-mypy.sh.in \
-      --replace "/bin/bash" "${bash}/bin/bash"
+    patchShebangs tools/protoc-gen-mypy.sh.in
+  '';
 
-    sed -i '/pytest-runner/d' setup.py
+  # Set CMAKE_INSTALL_LIBDIR to lib explicitly, because otherwise it gets set
+  # to lib64 and cmake incorrectly looks for the protobuf library in lib64
+  preConfigure = ''
+    export CMAKE_ARGS="-DCMAKE_INSTALL_LIBDIR=lib -DONNX_USE_PROTOBUF_SHARED_LIBS=ON"
   '';
 
   preBuild = ''

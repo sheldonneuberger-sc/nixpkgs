@@ -9,11 +9,14 @@
 , buildBazelPackage
 , buildPythonPackage
 , cctools
+, curl
 , cython
 , fetchFromGitHub
 , git
 , IOKit
 , jsoncpp
+, nsync
+, openssl
 , pybind11
 , setuptools
 , symlinkJoin
@@ -32,12 +35,12 @@
 , giflib
 , grpc
 , libjpeg_turbo
+, protobuf
 , python
 , snappy
 , zlib
 
   # CUDA flags:
-, cudaCapabilities ? [ "sm_35" "sm_50" "sm_60" "sm_70" "sm_75" "compute_80" ]
 , cudaSupport ? false
 , cudaPackages ? {}
 
@@ -46,11 +49,10 @@
 }:
 
 let
-
-  inherit (cudaPackages) cudatoolkit cudnn nccl;
+  inherit (cudaPackages) cudatoolkit cudaFlags cudnn nccl;
 
   pname = "jaxlib";
-  version = "0.3.0";
+  version = "0.3.22";
 
   meta = with lib; {
     description = "JAX is Autograd and XLA, brought together for high-performance machine learning research.";
@@ -93,7 +95,7 @@ let
       owner = "google";
       repo = "jax";
       rev = "${pname}-v${version}";
-      sha256 = "0ndpngx5k6lf6jqjck82bbp0gs943z0wh7vs9gwbyk2bw0da7w72";
+      hash = "sha256-bnczJ8ma/UMKhA5MUQ6H4az+Tj+By14ZTG6lQQwptQs=";
     };
 
     nativeBuildInputs = [
@@ -103,17 +105,21 @@ let
       setuptools
       wheel
       which
+    ] ++ lib.optionals stdenv.isDarwin [
+      cctools
     ];
 
     buildInputs = [
+      curl
       double-conversion
       giflib
       grpc
       jsoncpp
       libjpeg_turbo
       numpy
+      openssl
       pkgs.flatbuffers
-      pkgs.protobuf
+      protobuf
       pybind11
       scipy
       six
@@ -124,6 +130,8 @@ let
       cudnn
     ] ++ lib.optionals stdenv.isDarwin [
       IOKit
+    ] ++ lib.optionals (!stdenv.isDarwin) [
+      nsync
     ];
 
     postPatch = ''
@@ -149,13 +157,14 @@ let
       build --action_env=PYENV_ROOT
       build --python_path="${python}/bin/python"
       build --distinct_host_configuration=false
+      build --define PROTOBUF_INCLUDE_PATH="${protobuf}/include"
     '' + lib.optionalString cudaSupport ''
       build --action_env CUDA_TOOLKIT_PATH="${cudatoolkit_joined}"
       build --action_env CUDNN_INSTALL_PATH="${cudnn}"
       build --action_env TF_CUDA_PATHS="${cudatoolkit_joined},${cudnn},${nccl}"
       build --action_env TF_CUDA_VERSION="${lib.versions.majorMinor cudatoolkit.version}"
       build --action_env TF_CUDNN_VERSION="${lib.versions.major cudnn.version}"
-      build:cuda --action_env TF_CUDA_COMPUTE_CAPABILITIES="${lib.concatStringsSep "," cudaCapabilities}"
+      build:cuda --action_env TF_CUDA_COMPUTE_CAPABILITIES="${cudaFlags.cudaRealCapabilitiesCommaString}"
     '' + ''
       CFG
     '';
@@ -163,7 +172,7 @@ let
     # Copy-paste from TF derivation.
     # Most of these are not really used in jaxlib compilation but it's simpler to keep it
     # 'as is' so that it's more compatible with TF derivation.
-    TF_SYSTEM_LIBS = lib.concatStringsSep "," [
+    TF_SYSTEM_LIBS = lib.concatStringsSep "," ([
       "absl_py"
       "astor_archive"
       "astunparse_archive"
@@ -179,7 +188,6 @@ let
       "cython"
       "dill_archive"
       "double_conversion"
-      "enum34_archive"
       "flatbuffers"
       "functools32_archive"
       "gast_archive"
@@ -190,11 +198,9 @@ let
       "libjpeg_turbo"
       "lmdb"
       "nasm"
-      # "nsync" # not packaged in nixpkgs
       "opt_einsum_archive"
       "org_sqlite"
       "pasta"
-      "pcre"
       "png"
       "pybind11"
       "six_archive"
@@ -204,17 +210,19 @@ let
       "typing_extensions_archive"
       "wrapt"
       "zlib"
-    ];
+    ] ++ lib.optionals (!stdenv.isDarwin) [
+      "nsync" # fails to build on darwin
+    ]);
 
     # Make sure Bazel knows about our configuration flags during fetching so that the
     # relevant dependencies can be downloaded.
     bazelFlags = [
       "-c opt"
-    ] ++ lib.optional (stdenv.targetPlatform.isx86_64 && stdenv.targetPlatform.isUnix) [
+    ] ++ lib.optionals (stdenv.targetPlatform.isx86_64 && stdenv.targetPlatform.isUnix) [
       "--config=avx_posix"
-    ] ++ lib.optional cudaSupport [
+    ] ++ lib.optionals cudaSupport [
       "--config=cuda"
-    ] ++ lib.optional mklSupport [
+    ] ++ lib.optionals mklSupport [
       "--config=mkl_open_source_only"
     ] ++ lib.optionals stdenv.cc.isClang [
       # bazel depends on the compiler frontend automatically selecting these flags based on file
@@ -226,9 +234,13 @@ let
     fetchAttrs = {
       sha256 =
         if cudaSupport then
-          "sha256-Ald+vplRx/DDG/7TfHAqD4Gktb1BGnf7FSCCJzSI0eo="
-        else
-          "sha256-eK5IjTAncDarkWYKnXrEo7kw7J7iOH7in2L2GabnFYo=";
+          "sha256-n8wo+hD9ZYO1SsJKgyJzUmjRlsz45WT6tt5ZLleGvGY="
+        else {
+          x86_64-linux = "sha256-A0A18kxgGNGHNQ67ZPUzh3Yq2LEcRV7CqR9EfP80NQk=";
+          aarch64-linux = "sha256-mU2jzuDu89jVmaG/M5bA3jSd7n7lDi+h8sdhs1z8p1A=";
+          x86_64-darwin = "sha256-9nNTpetvjyipD/l8vKlregl1j/OnZKAcOCoZQeRBvts=";
+          aarch64-darwin = "sha256-dOGUsdFImeOLcZ3VtgrNnd8A/HgIs/LYuH9GQV7A+78=";
+        }.${stdenv.system} or (throw "unsupported system ${stdenv.system}");
     };
 
     buildAttrs = {
@@ -239,15 +251,10 @@ let
       # 2) Link protobuf from nixpkgs (through TF_SYSTEM_LIBS when using gcc) to prevent crashes on
       #    loading multiple extensions in the same python program due to duplicate protobuf DBs.
       # 3) Patch python path in the compiler driver.
-      # 4) Patch tensorflow sources to work with later versions of protobuf. See
-      #    https://github.com/google/jax/issues/9534. Note that this should be
-      #    removed on the next release after 0.3.0.
       preBuild = ''
-        for src in ./jaxlib/*.{cc,h}; do
+        for src in ./jaxlib/*.{cc,h} ./jaxlib/cuda/*.{cc,h}; do
           sed -i 's@include/pybind11@pybind11@g' $src
         done
-        substituteInPlace ../output/external/org_tensorflow/tensorflow/compiler/xla/python/pprof_profile_builder.cc \
-          --replace "status.message()" "std::string{status.message()}"
       '' + lib.optionalString cudaSupport ''
         patchShebangs ../output/external/org_tensorflow/third_party/gpus/crosstool/clang/bin/crosstool_wrapper_driver_is_not_gcc.tpl
       '' + lib.optionalString stdenv.isDarwin ''
@@ -262,8 +269,8 @@ let
         sed -i 's@-lprotobuf@-l:libprotobuf.a@' ../output/external/org_tensorflow/third_party/systemlibs/protobuf.BUILD
         sed -i 's@-lprotoc@-l:libprotoc.a@' ../output/external/org_tensorflow/third_party/systemlibs/protobuf.BUILD
       '' else if stdenv.cc.isClang then ''
-        sed -i 's@-lprotobuf@${pkgs.protobuf}/lib/libprotobuf.a@' ../output/external/org_tensorflow/third_party/systemlibs/protobuf.BUILD
-        sed -i 's@-lprotoc@${pkgs.protobuf}/lib/libprotoc.a@' ../output/external/org_tensorflow/third_party/systemlibs/protobuf.BUILD
+        sed -i 's@-lprotobuf@${protobuf}/lib/libprotobuf.a@' ../output/external/org_tensorflow/third_party/systemlibs/protobuf.BUILD
+        sed -i 's@-lprotoc@${protobuf}/lib/libprotoc.a@' ../output/external/org_tensorflow/third_party/systemlibs/protobuf.BUILD
       '' else throw "Unsupported stdenv.cc: ${stdenv.cc}");
 
       installPhase = ''
@@ -275,7 +282,7 @@ let
   };
   platformTag =
     if stdenv.targetPlatform.isLinux then
-      "manylinux2010_${stdenv.targetPlatform.linuxArch}"
+      "manylinux2014_${stdenv.targetPlatform.linuxArch}"
     else if stdenv.system == "x86_64-darwin" then
       "macosx_10_9_${stdenv.targetPlatform.linuxArch}"
     else if stdenv.system == "aarch64-darwin" then
@@ -287,7 +294,9 @@ buildPythonPackage {
   inherit meta pname version;
   format = "wheel";
 
-  src = "${bazel-build}/jaxlib-${version}-cp${builtins.replaceStrings ["."] [""] python.pythonVersion}-none-${platformTag}.whl";
+  src =
+    let cp = "cp${builtins.replaceStrings ["."] [""] python.pythonVersion}";
+    in "${bazel-build}/jaxlib-${version}-${cp}-${cp}-${platformTag}.whl";
 
   # Note that cudatoolkit is necessary since jaxlib looks for "ptxas" in $PATH.
   # See https://github.com/NixOS/nixpkgs/pull/164176#discussion_r828801621 for
@@ -306,6 +315,7 @@ buildPythonPackage {
 
   propagatedBuildInputs = [
     absl-py
+    curl
     double-conversion
     flatbuffers
     giflib

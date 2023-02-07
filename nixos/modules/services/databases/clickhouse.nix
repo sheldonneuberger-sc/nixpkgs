@@ -11,12 +11,12 @@ with lib;
 
     services.clickhouse = {
 
-      enable = mkEnableOption "ClickHouse database server";
+      enable = mkEnableOption (lib.mdDoc "ClickHouse database server");
 
       package = mkOption {
         type = types.package;
         default = pkgs.clickhouse;
-        defaultText = "pkgs.clickhouse";
+        defaultText = lib.literalExpression "pkgs.clickhouse";
         description = lib.mdDoc ''
           ClickHouse package to use.
         '';

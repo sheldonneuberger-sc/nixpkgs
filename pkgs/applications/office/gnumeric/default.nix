@@ -7,11 +7,11 @@ let
   inherit (python3Packages) python pygobject3;
 in stdenv.mkDerivation rec {
   pname = "gnumeric";
-  version = "1.12.52";
+  version = "1.12.54";
 
   src = fetchurl {
     url = "mirror://gnome/sources/${pname}/${lib.versions.majorMinor version}/${pname}-${version}.tar.xz";
-    sha256 = "c89zBJoiodgoUGJ1ssk3jsN8X/N7aLsfL0lPDWQAgjs=";
+    sha256 = "RpBAYv0cSkyTWW0mv2eTLNcvwPjSxaZ8F5GFJ/7oK3Q=";
   };
 
   configureFlags = [ "--disable-component" ];

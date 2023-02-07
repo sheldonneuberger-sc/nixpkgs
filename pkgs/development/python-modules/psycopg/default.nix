@@ -16,6 +16,7 @@
 
 # psycopg-c
 , cython_3
+, tomli
 
 # docs
 , furo
@@ -32,19 +33,20 @@
 
 let
   pname = "psycopg";
-  version = "3.0.16";
+  version = "3.1.8";
 
   src = fetchFromGitHub {
     owner = "psycopg";
     repo = pname;
-    rev = version;
-    hash = "sha256-jKhpmCcDi7FyMSpn51eSukFvmu3yacNovmRYG9jnu3g=";
+    rev = "refs/tags/${version}";
+    hash = "sha256-VmuotHcLWd+k8/GLv0N2wSZR0sZjY+TmGBQjhpYE3YA=";
   };
 
   patches = [
     (substituteAll {
-      src = ./libpq.patch;
+      src = ./ctypes.patch;
       libpq = "${postgresql.lib}/lib/libpq${stdenv.hostPlatform.extensions.sharedLibrary}";
+      libc = "${stdenv.cc.libc}/lib/libc.so.6";
     })
   ];
 
@@ -69,9 +71,10 @@ let
     '';
 
     nativeBuildInputs = [
-      setuptools
       cython_3
       postgresql
+      setuptools
+      tomli
     ];
 
     # tested in psycopg
@@ -95,7 +98,7 @@ let
       cd psycopg_pool
     '';
 
-    propagatedBuildInputs = lib.optionals (pythonOlder "3.10") [
+    propagatedBuildInputs = [
       typing-extensions
     ];
 
@@ -166,7 +169,7 @@ buildPythonPackage rec {
     cd ..
   '';
 
-  checkInputs = [
+  nativeCheckInputs = [
     pproxy
     pytest-asyncio
     pytest-randomly
@@ -180,10 +183,6 @@ buildPythonPackage rec {
     # don't depend on mypy for tests
     "test_version"
     "test_package_version"
-  ] ++ lib.optionals (stdenv.isDarwin) [
-    # racy test
-    "test_sched"
-    "test_sched_error"
   ];
 
   disabledTestPaths = [
@@ -192,10 +191,12 @@ buildPythonPackage rec {
     "tests/test_dns_srv.py"
     # Mypy typing test
     "tests/test_typing.py"
+    "tests/crdb/test_typing.py"
   ];
 
   pytestFlagsArray = [
-    "-o cache_dir=$TMPDIR"
+    "-o" "cache_dir=$TMPDIR"
+    "-m" "'not timing'"
   ];
 
   postCheck = ''

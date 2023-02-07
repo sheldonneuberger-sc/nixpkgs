@@ -35,9 +35,16 @@
 
 stdenv.mkDerivation rec {
   pname = "muffin";
-  version = "5.4.6";
+  version = "5.6.3";
 
   outputs = [ "out" "dev" "man" ];
+
+  src = fetchFromGitHub {
+    owner = "linuxmint";
+    repo = pname;
+    rev = version;
+    hash = "sha256-qcm1CRUMKFx4KDXBnaIVLHuZTzSMEWEBFTWMe85pJDE=";
+  };
 
   patches = [
     (substituteAll {
@@ -45,13 +52,6 @@ stdenv.mkDerivation rec {
       zenity = gnome.zenity;
     })
   ];
-
-  src = fetchFromGitHub {
-    owner = "linuxmint";
-    repo = pname;
-    rev = version;
-    hash = "sha256-xTpL+o7gFvu8VNbCb8c0Y0Z8ncqb9y2qTiXP3rHAz+M=";
-  };
 
   nativeBuildInputs = [
     desktop-file-utils

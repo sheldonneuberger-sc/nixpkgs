@@ -1,4 +1,4 @@
-{ lib, buildPythonPackage, fetchPypi, python, numpy, matplotlib, nose }:
+{ lib, buildPythonPackage, fetchPypi, numpy, matplotlib, nose }:
 
 buildPythonPackage rec {
   pname = "deap";
@@ -9,17 +9,9 @@ buildPythonPackage rec {
     sha256 = "sha256-h3LxsP/wQtXlFrCuusLHBiQwRap9DejguGWPOAGBzzE=";
   };
 
-  postPatch = ''
-    sed -i '/use_2to3=True/d' setup.py
-  '';
-
   propagatedBuildInputs = [ numpy matplotlib ];
 
-  preBuild = ''
-    2to3 -wn deap
-  '';
-
-  checkInputs = [ nose ];
+  nativeCheckInputs = [ nose ];
   checkPhase = ''
     nosetests --verbosity=3
   '';

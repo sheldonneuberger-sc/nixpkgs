@@ -8,7 +8,6 @@ let
     concatLists
     concatMap
     concatMapStringsSep
-    elemAt
     filter
     foldl'
     head
@@ -95,14 +94,15 @@ rec {
     name: mkOption {
     default = false;
     example = true;
-    description = "Whether to enable ${name}.";
+    description =
+      if name ? _type && name._type == "mdDoc"
+      then lib.mdDoc "Whether to enable ${name.text}."
+      else "Whether to enable ${name}.";
     type = lib.types.bool;
   };
 
   /* Creates an Option attribute set for an option that specifies the
      package a module should use for some purpose.
-
-     Type: mkPackageOption :: pkgs -> string -> { default :: [string], example :: null | string | [string] } -> option
 
      The package is specified as a list of strings representing its attribute path in nixpkgs.
 
@@ -114,6 +114,8 @@ rec {
 
      You can omit the default path if the name of the option is also attribute path in nixpkgs.
 
+     Type: mkPackageOption :: pkgs -> string -> { default :: [string]; example :: null | string | [string]; } -> option
+
      Example:
        mkPackageOption pkgs "hello" { }
        => { _type = "option"; default = «derivation /nix/store/3r2vg51hlxj3cx5vscp0vkv60bqxkaq0-hello-2.10.drv»; defaultText = { ... }; description = "The hello package to use."; type = { ... }; }
@@ -121,7 +123,7 @@ rec {
      Example:
        mkPackageOption pkgs "GHC" {
          default = [ "ghc" ];
-         example = "pkgs.haskell.packages.ghc924.ghc.withPackages (hkgs: [ hkgs.primes ])";
+         example = "pkgs.haskell.packages.ghc92.ghc.withPackages (hkgs: [ hkgs.primes ])";
        }
        => { _type = "option"; default = «derivation /nix/store/jxx55cxsjrf8kyh3fp2ya17q99w7541r-ghc-8.10.7.drv»; defaultText = { ... }; description = "The GHC package to use."; example = { ... }; type = { ... }; }
   */
@@ -141,6 +143,11 @@ rec {
         ${if example != null then "example" else null} = literalExpression
           (if isList example then "pkgs." + concatStringsSep "." example else example);
       };
+
+  /* Like mkPackageOption, but emit an mdDoc description instead of DocBook. */
+  mkPackageOptionMD = args: name: extra:
+    let option = mkPackageOption args name extra;
+    in option // { description = lib.mdDoc option.description; };
 
   /* This option accepts anything, but it does not produce any result.
 
@@ -194,7 +201,7 @@ rec {
 
   /* Extracts values of all "value" keys of the given list.
 
-     Type: getValues :: [ { value :: a } ] -> [a]
+     Type: getValues :: [ { value :: a; } ] -> [a]
 
      Example:
        getValues [ { value = 1; } { value = 2; } ] // => [ 1 2 ]
@@ -204,7 +211,7 @@ rec {
 
   /* Extracts values of all "file" keys of the given list
 
-     Type: getFiles :: [ { file :: a } ] -> [a]
+     Type: getFiles :: [ { file :: a; } ] -> [a]
 
      Example:
        getFiles [ { file = "file1"; } { file = "file2"; } ] // => [ "file1" "file2" ]
@@ -216,12 +223,13 @@ rec {
   # the set generated with filterOptionSets.
   optionAttrSetToDocList = optionAttrSetToDocList' [];
 
-  optionAttrSetToDocList' = prefix: options:
+  optionAttrSetToDocList' = _: options:
     concatMap (opt:
       let
+        name = showOption opt.loc;
         docOption = rec {
           loc = opt.loc;
-          name = showOption opt.loc;
+          inherit name;
           description = opt.description or null;
           declarations = filter (x: x != unknownModule) opt.declarations;
           internal = opt.internal or false;
@@ -232,9 +240,18 @@ rec {
           readOnly = opt.readOnly or false;
           type = opt.type.description or "unspecified";
         }
-        // optionalAttrs (opt ? example) { example = scrubOptionValue opt.example; }
-        // optionalAttrs (opt ? default) { default = scrubOptionValue opt.default; }
-        // optionalAttrs (opt ? defaultText) { default = opt.defaultText; }
+        // optionalAttrs (opt ? example) {
+          example =
+            builtins.addErrorContext "while evaluating the example of option `${name}`" (
+              renderOptionValue opt.example
+            );
+        }
+        // optionalAttrs (opt ? default) {
+          default =
+            builtins.addErrorContext "while evaluating the default value of option `${name}`" (
+              renderOptionValue (opt.defaultText or opt.default)
+            );
+        }
         // optionalAttrs (opt ? relatedPackages && opt.relatedPackages != null) { inherit (opt) relatedPackages; };
 
         subOptions =
@@ -254,6 +271,9 @@ rec {
      efficient: the XML representation of derivations is very large
      (on the order of megabytes) and is not actually used by the
      manual generator.
+
+     This function was made obsolete by renderOptionValue and is kept for
+     compatibility with out-of-tree code.
   */
   scrubOptionValue = x:
     if isDerivation x then
@@ -261,6 +281,17 @@ rec {
     else if isList x then map scrubOptionValue x
     else if isAttrs x then mapAttrs (n: v: scrubOptionValue v) (removeAttrs x ["_args"])
     else x;
+
+
+  /* Ensures that the given option value (default or example) is a `_type`d string
+     by rendering Nix values to `literalExpression`s.
+  */
+  renderOptionValue = v:
+    if v ? _type && v ? text then v
+    else literalExpression (lib.generators.toPretty {
+      multiline = true;
+      allowPrettyValues = true;
+    } v);
 
 
   /* For use in the `defaultText` and `example` option attributes. Causes the
@@ -281,7 +312,10 @@ rec {
   */
   literalDocBook = text:
     if ! isString text then throw "literalDocBook expects a string."
-    else { _type = "literalDocBook"; inherit text; };
+    else
+      lib.warnIf (lib.isInOldestRelease 2211)
+        "literalDocBook is deprecated, use literalMD instead"
+        { _type = "literalDocBook"; inherit text; };
 
   /* Transition marker for documentation that's already migrated to markdown
      syntax.
@@ -317,10 +351,16 @@ rec {
   showOption = parts: let
     escapeOptionPart = part:
       let
-        escaped = lib.strings.escapeNixString part;
-      in if escaped == "\"${part}\""
+        # We assume that these are "special values" and not real configuration data.
+        # If it is real configuration data, it is rendered incorrectly.
+        specialIdentifiers = [
+          "<name>"          # attrsOf (submodule {})
+          "*"               # listOf (submodule {})
+          "<function body>" # functionTo
+        ];
+      in if builtins.elem part specialIdentifiers
          then part
-         else escaped;
+         else lib.strings.escapeNixIdentifier part;
     in (concatStringsSep ".") (map escapeOptionPart parts);
   showFiles = files: concatStringsSep " and " (map (f: "`${f}'") files);
 

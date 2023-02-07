@@ -25,7 +25,7 @@ let
 
 in {
   options.services.radicale = {
-    enable = mkEnableOption "Radicale CalDAV and CardDAV server";
+    enable = mkEnableOption (lib.mdDoc "Radicale CalDAV and CardDAV server");
 
     package = mkOption {
       description = lib.mdDoc "Radicale package to use.";
@@ -77,7 +77,7 @@ in {
         <https://radicale.org/3.0.html#documentation/authentication-and-rights>.
         This option only works in conjunction with {option}`settings`.
         Setting this will also set {option}`settings.rights.type` and
-        {option}`settings.rights.file` to approriate values.
+        {option}`settings.rights.file` to appropriate values.
       '';
       default = { };
       example = literalExpression ''
@@ -200,5 +200,5 @@ in {
     };
   };
 
-  meta.maintainers = with lib.maintainers; [ aneeshusa infinisil dotlambda ];
+  meta.maintainers = with lib.maintainers; [ infinisil dotlambda ];
 }

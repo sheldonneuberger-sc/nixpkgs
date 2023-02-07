@@ -6,13 +6,13 @@
 
 buildDotnetModule rec {
   pname = "nbxplorer";
-  version = "2.3.33";
+  version = "2.3.57";
 
   src = fetchFromGitHub {
     owner = "dgarage";
     repo = "NBXplorer";
     rev = "v${version}";
-    sha256 = "sha256-yvnWSmf4FJoZ7ajZQQJFLleIQ/hmHD+rDoktJeIll+U=";
+    sha256 = "sha256-oLkkGdzjyvgIXi0HZiFPCShzbBR8cOgMf1h1Nf1U6Rk=";
   };
 
   projectFile = "NBXplorer/NBXplorer.csproj";

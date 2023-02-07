@@ -3,6 +3,7 @@
 , buildPythonPackage
 , fetchPypi
 , python
+, pythonOlder
 , cython
 , numpy
 , python-dateutil
@@ -27,12 +28,13 @@
 
 buildPythonPackage rec {
   pname = "pandas";
-  version = "1.4.3";
+  version = "1.5.2";
   format = "setuptools";
+  disabled = pythonOlder "3.8";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-L/d4hGjnWRdXTwgM1GgbJ+GnvzZGH+lotJqHtaVNAHw=";
+    hash = "sha256-IguY0VzuCyzYOaY1i9Hyc9A1a/lkwaGusy1H2wIVSIs=";
   };
 
   nativeBuildInputs = [ cython ];
@@ -45,7 +47,7 @@ buildPythonPackage rec {
     pytz
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     glibcLocales
     hypothesis
     jinja2
@@ -94,6 +96,10 @@ buildPythonPackage rec {
     # than expected, e.g. on amd64 with FMA or on arm64
     # https://github.com/pandas-dev/pandas/issues/38921
     "test_rolling_var_numerical_issues"
+    # Requires mathplotlib
+    "test_subset_for_boolean_cols"
+    # DeprecationWarning from numpy
+    "test_sort_values_sparse_no_warning"
   ] ++ lib.optionals stdenv.isDarwin [
     "test_locale"
     "test_clipboard"

@@ -1,5 +1,12 @@
-{ buildPythonPackage, fetchFromGitHub, lib, packaging, pillow, tesseract, substituteAll
+{ buildPythonPackage
+, fetchFromGitHub
+, lib
+, packaging
+, pillow
+, tesseract
+, substituteAll
 , pytestCheckHook
+, setuptools
 }:
 
 buildPythonPackage rec {
@@ -21,6 +28,10 @@ buildPythonPackage rec {
     })
   ];
 
+  nativeBuildInputs = [
+    setuptools
+  ];
+
   buildInputs = [
     tesseract
   ];
@@ -30,7 +41,7 @@ buildPythonPackage rec {
     pillow
   ];
 
-  checkInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   meta = with lib; {
     homepage = "https://pypi.org/project/pytesseract/";

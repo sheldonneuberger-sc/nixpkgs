@@ -7,26 +7,49 @@
 
 buildGoModule rec {
   pname = "seaweedfs";
-  version = "3.23";
+  version = "3.41";
 
   src = fetchFromGitHub {
-    owner = "chrislusf";
+    owner = "seaweedfs";
     repo = "seaweedfs";
     rev = version;
-    sha256 = "sha256-Pq0t8KDrmPfkJ0sWtpw1iAwycLj+YIuYIanyqEjdf5A=";
+    hash = "sha256-sNeuIcRJ249F9m7NBi5Vh4HMhWwDpNHAZsit1auVI5U=";
   };
 
-  vendorSha256 = "sha256-YbdGtB6BEo8RoEYXjj1NG8bXMDojddd1UY0IXQK1Kgo=";
+  vendorHash = "sha256-ZtHgZ0Mur102H2EvifsK3HYUQaI1dFMh/6eiJO09HBc=";
 
   subPackages = [ "weed" ];
 
-  passthru.tests.version =
-    testers.testVersion { package = seaweedfs; command = "weed version"; };
+  ldflags = [
+    "-w"
+    "-s"
+    "-X github.com/seaweedfs/seaweedfs/weed/util.COMMIT=N/A"
+  ];
+
+  tags = [
+    "elastic"
+    "gocdk"
+    "sqlite"
+    "ydb"
+    "tikv"
+  ];
+
+  preBuild = ''
+    export GODEBUG=http2client=0
+  '';
+
+  # There are no tests.
+  doCheck = false;
+
+  passthru.tests.version = testers.testVersion {
+    package = seaweedfs;
+    command = "weed version";
+  };
 
   meta = with lib; {
     description = "Simple and highly scalable distributed file system";
     homepage = "https://github.com/chrislusf/seaweedfs";
-    maintainers = with maintainers; [ cmacrae ];
+    maintainers = with maintainers; [ azahi cmacrae wozeparrot ];
     mainProgram = "weed";
     license = licenses.asl20;
   };

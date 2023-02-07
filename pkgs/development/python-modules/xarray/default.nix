@@ -12,14 +12,14 @@
 
 buildPythonPackage rec {
   pname = "xarray";
-  version = "2022.3.0";
+  version = "2022.12.0";
   format = "pyproject";
 
   disabled = pythonOlder "3.7";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-OYNEv30XBHeqzv9wIQ4R69aa9rFW/hOXgFTSXEhylEA=";
+    sha256 = "sha256-CD0I5VKnZHx+zhNt+jpLahN5JWvrVbvti43fBfHhTsc=";
   };
 
   SETUPTOOLS_SCM_PRETEND_VERSION="${version}";
@@ -35,7 +35,7 @@ buildPythonPackage rec {
     pandas
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
   ];
 

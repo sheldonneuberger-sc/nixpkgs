@@ -18,6 +18,7 @@
 , jsonschema
 , peewee
 , poetry-core
+, py
 , pycryptodome
 , pytest-aiohttp
 , pytest-benchmark
@@ -28,14 +29,14 @@
 
 buildPythonPackage rec {
   pname = "matrix-nio";
-  version = "0.19.0";
+  version = "0.20.1";
   format = "pyproject";
 
   src = fetchFromGitHub {
     owner = "poljar";
     repo = "matrix-nio";
     rev = version;
-    hash = "sha256-+WZk2m05y/bYj8zSuWTzm+rnCC0L9H9WNQ2RLXv7hDk=";
+    hash = "sha256-6oMOfyl8yR8FMprPYD831eiXh9g/bqslvxDmVcrNK80=";
   };
 
   postPatch = ''
@@ -69,17 +70,17 @@ buildPythonPackage rec {
     unpaddedbase64
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     aioresponses
     faker
     hypothesis
+    py
     pytest-aiohttp
     pytest-benchmark
     pytestCheckHook
   ];
 
   pytestFlagsArray = [
-    "--asyncio-mode=legacy"
     "--benchmark-disable"
   ];
 

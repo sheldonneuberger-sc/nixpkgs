@@ -1,4 +1,4 @@
-{ lib, python3Packages, fetchFromGitHub, glibcLocales, unittestCheckHook }:
+{ lib, python3Packages, fetchFromGitHub, glibcLocales }:
 
 with python3Packages;
 
@@ -22,7 +22,7 @@ buildPythonApplication rec {
     watchdog
   ];
 
-  checkInputs = [ unittestCheckHook mock freezegun pylint ];
+  nativeCheckInputs = [ unittestCheckHook mock freezegun pylint ];
 
   # Skip test that has been reported multiple times upstream without result:
   # bram85/topydo#271, bram85/topydo#274.

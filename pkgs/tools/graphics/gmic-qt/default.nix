@@ -14,7 +14,6 @@
 , libtiff
 , libpng
 , curl
-, krita ? null
 , gimp ? null
 , gmic
 , cimg
@@ -38,13 +37,6 @@ let
       description = "GIMP plugin for the G'MIC image processing framework";
     };
 
-    krita = {
-      extraDeps = [
-        krita
-      ];
-      description = "Krita plugin for the G'MIC image processing framework";
-    };
-
     standalone = {
       description = "Versatile front-end to the image processing framework G'MIC";
     };
@@ -58,13 +50,13 @@ assert lib.assertMsg (builtins.all (d: d != null) variants.${variant}.extraDeps 
 
 mkDerivation rec {
   pname = "gmic-qt${lib.optionalString (variant != "standalone") "-${variant}"}";
-  version = "3.1.5";
+  version = "3.2.0";
 
   src = fetchFromGitHub {
     owner = "c-koi";
     repo = "gmic-qt";
     rev = "v.${version}";
-    sha256 = "rSBdh6jhiVZogZADEKn3g7bkGPnWWOEnRF0jNCe1BCk=";
+    sha256 = "sha256-I5XC7zbDyBPFj4zul9rshoyeVV0hRQQ3aZQzEvYrgdc=";
   };
 
   nativeBuildInputs = [

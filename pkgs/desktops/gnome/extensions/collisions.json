@@ -40,6 +40,10 @@
       "transparent-window@pbxqdown.github.com",
       "transparentwindows.mdirshad07"
     ],
+    "azan-islamic-prayer-times": [
+      "azan@faissal.bensefia.id",
+      "azan@hatem.masmoudi.org"
+    ],
     "floating-dock": [
       "floatingDock@sun.wxg@gmail.com",
       "floating-dock@nandoferreira_prof@hotmail.com"
@@ -114,6 +118,10 @@
     "volume-scroller": [
       "volume_scroller@trflynn89.pm.me",
       "volume_scroller@noskoski"
+    ],
+    "floating-panel": [
+      "floating-panel@aylur",
+      "floating-panel-usedbymyself@wpism"
     ]
   },
   "41": {
@@ -132,6 +140,10 @@
     "shutdowntimer": [
       "ShutdownTimer@neumann",
       "ShutdownTimer@deminder"
+    ],
+    "noannoyance": [
+      "noannoyance@sindex.com",
+      "noannoyance@daase.net"
     ],
     "fuzzy-clock": [
       "fuzzy-clock@keepawayfromfire.co.uk",
@@ -156,6 +168,10 @@
     "volume-scroller": [
       "volume_scroller@trflynn89.pm.me",
       "volume_scroller@noskoski"
+    ],
+    "floating-panel": [
+      "floating-panel@aylur",
+      "floating-panel-usedbymyself@wpism"
     ]
   },
   "42": {
@@ -171,6 +187,10 @@
       "lockkeys@vaina.lt",
       "lockkeys@fawtytoo"
     ],
+    "noannoyance": [
+      "noannoyance@sindex.com",
+      "noannoyance@daase.net"
+    ],
     "panel-date-format": [
       "panel-date-format@keiii.github.com",
       "panel-date-format@atareao.es"
@@ -182,6 +202,32 @@
     "volume-scroller": [
       "volume_scroller@trflynn89.pm.me",
       "volume_scroller@noskoski"
+    ],
+    "auto-activities": [
+      "auto-activities@acedron.github.io",
+      "auto-activities@CleoMenezesJr.github.io"
+    ],
+    "floating-panel": [
+      "floating-panel@aylur",
+      "floating-panel-usedbymyself@wpism"
+    ]
+  },
+  "43": {
+    "applications-menu": [
+      "apps-menu@gnome-shell-extensions.gcampax.github.com",
+      "Applications_Menu@rmy.pobox.com"
+    ],
+    "workspace-indicator": [
+      "workspace-indicator@gnome-shell-extensions.gcampax.github.com",
+      "horizontal-workspace-indicator@tty2.io"
+    ],
+    "noannoyance": [
+      "noannoyance@sindex.com",
+      "noannoyance@daase.net"
+    ],
+    "floating-panel": [
+      "floating-panel@aylur",
+      "floating-panel-usedbymyself@wpism"
     ]
   }
 }
