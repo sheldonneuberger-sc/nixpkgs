@@ -24,8 +24,6 @@ buildPythonPackage rec {
   propagatedBuildInputs = [ click ];
 
   nativeCheckInputs = [
-    ipython
-    mock
     pytestCheckHook
     sh
   ];
